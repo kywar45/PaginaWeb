@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS web_instagram_reels (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  url VARCHAR(500) NOT NULL,
+  titulo VARCHAR(160) NOT NULL DEFAULT '',
+  posicion INT UNSIGNED NOT NULL DEFAULT 0,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_instagram_activo_posicion (activo, posicion, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

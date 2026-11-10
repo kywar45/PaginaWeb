@@ -1,0 +1,22 @@
+[
+  {
+    "test": "popup1396",
+    "dimensions": {
+      "width": 1396,
+      "height": 917,
+      "documentWidth": 1396,
+      "menu": {
+        "left": 16,
+        "top": 179.5,
+        "right": 1380,
+        "bottom": 901.5,
+        "clientWidth": 1364,
+        "scrollWidth": 1364,
+        "clientHeight": 722,
+        "scrollHeight": 724
+      }
+    },
+    "tiles": 10,
+    "products": 4
+  }
+]

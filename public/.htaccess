@@ -1,0 +1,15 @@
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /ImportadoraSupernova/
+
+# No reescribir archivos ni carpetas que sí existen
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Enviar todas las rutas internas de la SPA a index.html
+
+RewriteRule . /ImportadoraSupernova/index.html [L]
+</IfModule>
