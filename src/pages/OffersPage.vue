@@ -1,10 +1,8 @@
 <template>
   <q-page class="offers-page">
     <section class="offers-page__inner">
-      <div class="offers-page__heading">
-        <h1><q-icon name="bolt" /> Ofertas del dia</h1>
-        <q-btn flat dense no-caps icon="arrow_back" label="Volver" to="/" />
-      </div>
+      <PageBreadcrumbs title="Ofertas del día" />
+      <h1 class="sr-only">Ofertas del día</h1>
 
       <div v-if="loading" class="q-pa-xl text-center" role="status">
         <q-spinner color="primary" size="36px" />
@@ -22,9 +20,9 @@
           class="offer-card"
           role="button"
           tabindex="0"
-          @click="selectedProduct = product"
-          @keydown.enter="selectedProduct = product"
-          @keydown.space.prevent="selectedProduct = product"
+          @click="openProduct(product)"
+          @keydown.enter="openProduct(product)"
+          @keydown.space.prevent="openProduct(product)"
         >
           <div class="offer-image">
             <SaleBadge class="card-sale-badge" :percentage="product.porcentaje_descuento" />
@@ -35,14 +33,7 @@
               @error="useFallbackImage"
             />
           </div>
-          <div class="offer-body">
-            <h2>{{ product.nombre }}</h2>
-            <p>{{ product.codigo }}</p>
-            <del v-if="product.tiene_descuento">{{ money(product.precio_normal) }}</del>
-            <strong class="offer-price price--sale">
-              {{ money(product.precio_final) }}
-            </strong>
-          </div>
+          <ProductCardInfo :product="product" />
         </article>
       </div>
       <div v-if="!loading && !errorMessage && products.length" class="offers-page__pagination">
@@ -74,30 +65,15 @@
       </div>
     </section>
 
-    <q-dialog :model-value="!!selectedProduct" @update:model-value="selectedProduct = null">
-      <q-card v-if="selectedProduct" class="product-dialog">
-        <q-card-section class="row justify-end">
-          <q-btn flat round icon="close" v-close-popup aria-label="Cerrar" />
-        </q-card-section>
-        <q-card-section>
-          <img
-            class="product-dialog__image"
-            :src="selectedProduct.imagen"
-            :alt="selectedProduct.nombre"
-            @error="useFallbackImage"
-          />
-          <h2>{{ selectedProduct.nombre }}</h2>
-          <p>{{ selectedProduct.codigo }}</p>
-          <strong class="price--sale">
-            {{ money(selectedProduct.precio_final) }}
-          </strong>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
+
   </q-page>
 </template>
 
 <script setup>
+import { useProductNavigation } from 'src/services/productNavigation'
+const openProduct = useProductNavigation()
+import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
+import ProductCardInfo from 'src/components/ProductCardInfo.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SaleBadge from 'src/components/SaleBadge.vue'
@@ -117,8 +93,7 @@ const products = ref([])
 const pagination = ref({})
 const loading = ref(false)
 const errorMessage = ref('')
-const selectedProduct = ref(null)
-const fallbackProductImage = publicAsset('img/logob.png')
+const fallbackProductImage = publicAsset('img/product-no-image.svg')
 
 async function loadProducts() {
   request?.abort()
@@ -126,7 +101,6 @@ async function loadProducts() {
   request = currentRequest
   loading.value = true
   errorMessage.value = ''
-  selectedProduct.value = null
   try {
     const response = await getProducts({
       coleccion: 'ofertas',
@@ -159,7 +133,6 @@ onBeforeUnmount(() => {
   request?.abort()
 })
 
-const money = (value) => value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
 
 function useFallbackImage(event) {
   const image = event?.target
@@ -171,6 +144,7 @@ function useFallbackImage(event) {
 </script>
 
 <style scoped lang="scss">
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .offers-page__pagination {
   display: flex;
   flex-direction: column;
@@ -404,5 +378,9 @@ function useFallbackImage(event) {
   z-index: 2;
   top: 9px;
   left: 9px;
+}
+
+.offer-card:not(.offer-card--see-all) .offer-image {
+  background: linear-gradient(180deg, #fff, #fff9fb) !important;
 }
 </style>

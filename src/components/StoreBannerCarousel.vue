@@ -3,41 +3,54 @@
     v-if="slides.length"
     class="banner-carousel"
     :class="{ 'banner-carousel--strip': strip }"
+    :style="mobileRatio ? { '--mobile-banner-ratio': mobileRatio } : undefined"
     :aria-label="label"
     aria-roledescription="carrusel"
   >
-    <component
-      :is="active.href ? 'a' : 'div'"
-      :href="active.href || undefined"
-      class="banner-carousel__slide"
+    <div
+      ref="viewport"
+      class="banner-carousel__viewport"
+      :class="{ 'is-dragging': dragging }"
+      @pointerdown="startDrag"
+      @pointermove="drag"
+      @pointerup="endDrag"
+      @pointercancel="cancelDrag"
+      @click.capture="preventDragClick"
+      @dragstart.prevent
     >
-      <img
-        :key="active.image"
-        :src="active.image"
-        :alt="`${label} ${index + 1}`"
-        :loading="strip ? 'lazy' : 'eager'"
-        :fetchpriority="strip ? 'auto' : 'high'"
-        @error="failedImages.add(active.image)"
-      />
-    </component>
-    <div v-if="!strip" class="banner-finish" aria-hidden="true">
-      <span class="banner-gel banner-gel--left" />
-      <span class="banner-gel banner-gel--right" />
-      <span class="banner-glitter banner-glitter--left" />
-      <span class="banner-glitter banner-glitter--right" />
-      <span
-        v-for="spark in 6"
-        :key="spark"
-        class="banner-spark"
-        :class="`banner-spark--${spark}`"
-      />
+      <div
+        class="banner-carousel__track"
+        :class="{ 'is-instant': dragging || !animate }"
+        :style="{ transform: `translateX(calc(${-position * 100}% + ${dragOffset}px))` }"
+        @transitionend.self="finishTransition"
+      >
+        <component
+          :is="slide.href ? 'a' : 'div'"
+          v-for="(slide, slot) in trackSlides"
+          :key="`${slot}-${slide.id}`"
+          :href="slide.href || undefined"
+          :aria-hidden="slot !== position ? 'true' : undefined"
+          :tabindex="slot === position && slide.href ? 0 : -1"
+          class="banner-carousel__slide"
+        >
+          <img
+            :src="slide.image"
+            :alt="`${label} ${slide.id}`"
+            :loading="strip ? 'lazy' : 'eager'"
+            :fetchpriority="slot === position && !strip ? 'high' : 'auto'"
+            draggable="false"
+            @error="failedImages.add(slide.image)"
+            @load="rememberMobileRatio"
+          />
+        </component>
+      </div>
     </div>
     <template v-if="slides.length > 1">
       <button
         class="banner-carousel__arrow banner-carousel__arrow--previous"
         type="button"
         aria-label="Banner anterior"
-        @click="move(-1)"
+        @click.stop.prevent="move(-1)"
       >
         <q-icon name="chevron_left" />
       </button>
@@ -45,7 +58,7 @@
         class="banner-carousel__arrow banner-carousel__arrow--next"
         type="button"
         aria-label="Banner siguiente"
-        @click="move(1)"
+        @click.stop.prevent="move(1)"
       >
         <q-icon name="chevron_right" />
       </button>
@@ -56,7 +69,7 @@
           type="button"
           :aria-label="`Ver banner ${position + 1}`"
           :aria-current="index === position ? 'true' : undefined"
-          @click="index = position"
+          @click.stop.prevent="selectSlide(position)"
         >
           <span :class="{ active: index === position }" />
         </button>
@@ -66,7 +79,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 
 const props = defineProps({
@@ -77,6 +90,106 @@ const props = defineProps({
 const quasar = useQuasar()
 const index = ref(0)
 const failedImages = reactive(new Set())
+const mobileRatio = ref(null)
+const viewport = ref(null)
+const position = ref(1)
+const animate = ref(true)
+const dragging = ref(false)
+const dragOffset = ref(0)
+let pointerId = null
+let startX = 0
+let startY = 0
+let blockClick = false
+let settling = false
+let settleTimer
+let frame
+function finishTransition() {
+  window.clearTimeout(settleTimer)
+  if (position.value === 0 || position.value === slides.value.length + 1) {
+    animate.value = false
+    position.value = index.value + 1
+    frame = window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => {
+        animate.value = true
+      })
+    })
+  }
+  settling = false
+}
+function startDrag(event) {
+  if (!event.isPrimary || event.button !== 0 || slides.value.length < 2 || settling) return
+  pointerId = event.pointerId
+  startX = event.clientX
+  startY = event.clientY
+  blockClick = false
+  window.clearInterval(autoplayTimer)
+}
+function drag(event) {
+  if (event.pointerId !== pointerId) return
+  const dx = event.clientX - startX
+  const dy = event.clientY - startY
+  if (!dragging.value && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+    pointerId = null
+    restartAutoplay()
+    return
+  }
+  if (!dragging.value && Math.abs(dx) > 8) {
+    dragging.value = true
+    blockClick = true
+    viewport.value.setPointerCapture(event.pointerId)
+  }
+  if (dragging.value) dragOffset.value = dx
+}
+function releasePointer(event) {
+  if (viewport.value?.hasPointerCapture(event.pointerId))
+    viewport.value.releasePointerCapture(event.pointerId)
+  pointerId = null
+}
+function endDrag(event) {
+  if (event.pointerId !== pointerId) return
+  const offset = dragOffset.value
+  const wasDragging = dragging.value
+  dragging.value = false
+  dragOffset.value = 0
+  releasePointer(event)
+  if (wasDragging && Math.abs(offset) > Math.min(80, viewport.value.clientWidth * 0.18))
+    move(offset < 0 ? 1 : -1)
+  else restartAutoplay()
+}
+function cancelDrag(event) {
+  if (event.pointerId !== pointerId) return
+  dragging.value = false
+  dragOffset.value = 0
+  releasePointer(event)
+  restartAutoplay()
+}
+function preventDragClick(event) {
+  if (!blockClick) return
+  event.preventDefault()
+  event.stopPropagation()
+  blockClick = false
+}
+let autoplayTimer
+function rememberMobileRatio(event) {
+  const image = event.target
+  if (quasar.screen.width < 600 && !mobileRatio.value && image.naturalHeight) {
+    mobileRatio.value = `${image.naturalWidth} / ${image.naturalHeight}`
+  }
+}
+function restartAutoplay() {
+  window.clearInterval(autoplayTimer)
+  if (quasar.screen.width >= 600 || props.strip || slides.value.length < 2) return
+  autoplayTimer = window.setInterval(() => {
+    if (!document.hidden && !dragging.value) move(1)
+  }, 5000)
+}
+function selectSlide(position) {
+  if (settling || dragging.value) return
+  index.value = position
+  animate.value = true
+  setPosition(position + 1)
+  restartAutoplay()
+}
 function safeUrl(value) {
   if (typeof value !== 'string' || !value.trim()) return null
   try {
@@ -101,149 +214,84 @@ const slides = computed(() =>
     })
     .filter((banner) => banner.image),
 )
-watch(slides, () => {
-  if (index.value >= slides.value.length) index.value = 0
+const trackSlides = computed(() => {
+  const list = slides.value
+  return list.length > 1 ? [list[list.length - 1], ...list, list[0]] : list
 })
-const active = computed(() => slides.value[index.value] || slides.value[0])
-function move(direction) {
-  index.value = (index.value + direction + slides.value.length) % slides.value.length
+watch(
+  slides,
+  () => {
+    if (index.value >= slides.value.length) index.value = 0
+    position.value = slides.value.length > 1 ? index.value + 1 : 0
+    settling = false
+    dragging.value = false
+    dragOffset.value = 0
+  },
+  { immediate: true },
+)
+function setPosition(value) {
+  if (position.value === value) return
+  settling = true
+  position.value = value
+  window.clearTimeout(settleTimer)
+  settleTimer = window.setTimeout(finishTransition, 550)
 }
+function move(direction) {
+  if (slides.value.length < 2 || settling || dragging.value) return
+  animate.value = true
+  index.value = (index.value + direction + slides.value.length) % slides.value.length
+  setPosition(position.value + direction)
+  restartAutoplay()
+}
+onMounted(() => {
+  watch(
+    [slides, () => quasar.screen.width < 600],
+    () => {
+      restartAutoplay()
+      // Cache upcoming images so switching slides does not show an empty frame.
+      slides.value.forEach((slide) => {
+        const image = new Image()
+        image.src = slide.image
+      })
+    },
+    { immediate: true },
+  )
+})
+onBeforeUnmount(() => {
+  window.clearInterval(autoplayTimer)
+  window.clearTimeout(settleTimer)
+  window.cancelAnimationFrame(frame)
+})
 </script>
 
 <style scoped lang="scss">
-.banner-finish {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: inherit;
-  pointer-events: none;
-}
-.banner-gel {
-  position: absolute;
-  width: 21%;
-  height: 56%;
-  border-radius: 44% 56% 64% 36% / 52% 35% 65% 48%;
-  background:
-    radial-gradient(ellipse at 35% 22%, #fffdfbd9, transparent 13%),
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--nude-lightest) 60%, transparent) 8%,
-      color-mix(in srgb, var(--nude-medium) 60%, transparent) 28%,
-      color-mix(in srgb, var(--store-paper) 73%, transparent) 34%,
-      color-mix(in srgb, var(--fuchsia-light) 50%, transparent) 52%,
-      color-mix(in srgb, var(--nude-light) 60%, transparent) 80%
-    );
-  box-shadow:
-    inset 3px 4px 5px #fff9,
-    inset -5px -7px 12px color-mix(in srgb, var(--q-primary) 20%, transparent);
-  border: 1px solid #fff6;
-}
-.banner-gel--left {
-  left: -15%;
-  bottom: -20%;
-  transform: rotate(-28deg);
-}
-.banner-gel--right {
-  right: -16%;
-  top: -22%;
-  transform: rotate(35deg);
-}
-.banner-glitter {
-  position: absolute;
-  width: 13%;
-  height: 85%;
-  background-image:
-    radial-gradient(circle, #ffe9cddd 0 1px, transparent 1.7px),
-    radial-gradient(circle, #d7a58be6 0 0.7px, transparent 1.5px),
-    radial-gradient(circle, #fff9ed 0 0.8px, transparent 1.6px);
-  background-size:
-    11px 17px,
-    7px 13px,
-    19px 23px;
-  background-position:
-    0 0,
-    3px 5px,
-    8px 11px;
-  mask-image: linear-gradient(90deg, #000, transparent 85%);
-  opacity: 0.65;
-}
-.banner-glitter--left {
-  left: -5%;
-  bottom: -30%;
-  transform: rotate(-28deg);
-}
-.banner-glitter--right {
-  right: -5%;
-  top: -25%;
-  transform: rotate(152deg);
-}
-.banner-spark {
-  position: absolute;
-  width: 15px;
-  height: 15px;
-  background: #fff5e6;
-  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
-  animation: banner-twinkle 4s ease-in-out infinite;
-}
-.banner-spark--1 {
-  left: 3%;
-  bottom: 15%;
-}
-.banner-spark--2 {
-  left: 7%;
-  bottom: 6%;
-  width: 9px;
-  height: 9px;
-  animation-delay: -1.2s;
-}
-.banner-spark--3 {
-  left: 1%;
-  bottom: 32%;
-  width: 8px;
-  height: 8px;
-  animation-delay: -2.5s;
-}
-.banner-spark--4 {
-  right: 3%;
-  top: 12%;
-  animation-delay: -2s;
-}
-.banner-spark--5 {
-  right: 7%;
-  top: 5%;
-  width: 9px;
-  height: 9px;
-  animation-delay: -0.7s;
-}
-.banner-spark--6 {
-  right: 1%;
-  top: 28%;
-  width: 8px;
-  height: 8px;
-  animation-delay: -3s;
-}
-@keyframes banner-twinkle {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.7);
-  }
-  50% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .banner-spark {
-    animation: none;
-    opacity: 0.65;
-  }
-}
 .banner-carousel {
   position: relative;
   background: var(--store-paper);
 }
+.banner-carousel__viewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: pan-y pinch-zoom;
+  cursor: grab;
+  user-select: none;
+}
+.banner-carousel__viewport.is-dragging {
+  cursor: grabbing;
+}
+.banner-carousel__track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 480ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.banner-carousel__track.is-instant {
+  transition: none;
+}
 .banner-carousel__slide {
+  flex: 0 0 100%;
+  min-width: 0;
   display: block;
   width: 100%;
 }
@@ -314,14 +362,14 @@ function move(direction) {
   display: block;
   border: 1px solid white;
   box-shadow: 0 0 3px #0009;
-  background: #0006;
+  background: #f8c6d4;
   width: 8px;
   height: 8px;
   border-radius: 50%;
 }
 .banner-carousel__dots .active {
-  border-color: var(--hot-pink);
-  background: var(--hot-pink);
+  border-color: #f43f6f;
+  background: #f43f6f;
 }
 .banner-carousel--strip {
   margin: 10px 0 16px;
@@ -335,7 +383,27 @@ a:focus-visible {
 }
 @media (max-width: 599px) {
   .banner-carousel:not(.banner-carousel--strip) {
+    aspect-ratio: var(--mobile-banner-ratio, 16 / 9);
     border-radius: 16px;
+
+    .banner-carousel__slide,
+    .banner-carousel__slide img {
+      height: 100%;
+    }
+
+    .banner-carousel__slide img {
+      object-fit: contain;
+    }
+  }
+  .banner-carousel__dots {
+    flex-wrap: nowrap;
+    max-width: 70%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .banner-carousel__dots button {
+    flex-shrink: 0;
+    padding: 6px 3px;
   }
   .banner-carousel__arrow {
     width: 28px;

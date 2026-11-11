@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Repositories\ProductRepository;
+use App\Exceptions\ApiException;
 
 class ProductService
 {
@@ -17,9 +18,46 @@ class ProductService
         $this->imageBaseUrl = rtrim($this->env('PRODUCT_IMAGE_BASE_URL', self::DEFAULT_IMAGE_BASE_URL), '/') . '/';
     }
 
-    public function listProducts($collection, $page, $limit)
+    public function getProduct($id)
     {
-        $rows = $this->products->listPage($collection, $limit + 1, ($page - 1) * $limit);
+        $row = $this->products->findProduct($id);
+        if (!$row) {
+            throw new ApiException('PRODUCT_NOT_FOUND', 'El producto no existe o no esta publicado.', 404);
+        }
+        $product = $this->normalizeProduct($row);
+        $images = array();
+        if ($product['imagen'] !== null) $images[] = $product['imagen'];
+        foreach ($this->products->productImages($id) as $image) {
+            $url = $this->imageUrl($id, $image['a']);
+            if ($url !== null && !in_array($url, $images, true)) $images[] = $url;
+        }
+        $product['imagenes'] = $images;
+        $product['minimo_mayoreo'] = (int) $row['topem'];
+        $product['minimo_caja'] = (int) $row['topec'];
+        $product['categoria'] = $row['id_categoria'] === null ? null : array(
+            'id' => (int) $row['id_categoria'], 'name' => (string) $row['nombre_categoria'],
+        );
+        $product['subcategoria'] = $row['sub_categoria'] === null ? null : array(
+            'id' => (int) $row['sub_categoria'], 'name' => (string) $row['nombre_subcategoria'],
+        );
+        $product['variantes'] = array();
+        if (trim((string) $row['codigo']) !== '') {
+            foreach ($this->products->productVariants($row['codigo']) as $variant) {
+                $product['variantes'][] = $this->normalizeProduct($variant);
+            }
+        }
+        $product['relacionados'] = array();
+        if ($product['sub_categoria'] !== null) {
+            foreach ($this->products->relatedProducts($product['sub_categoria'], $id, 10) as $related) {
+                $product['relacionados'][] = $this->normalizeProduct($related);
+            }
+        }
+        return array('producto' => $product);
+    }
+
+    public function listProducts($collection, $page, $limit, $subcategoryId = null, $onlyAvailable = false, $categoryId = null)
+    {
+        $rows = $this->products->listPage($collection, $limit + 1, ($page - 1) * $limit, $subcategoryId, $onlyAvailable, $categoryId);
         $hasMore = count($rows) > $limit;
         $pagination = array(
             'page' => $page,
@@ -27,10 +65,18 @@ class ProductService
             'has_more' => $hasMore,
             'next_page' => $hasMore ? $page + 1 : null,
         );
-        if ($collection === 'ofertas') {
-            $total = $this->products->countOffers();
+        if ($categoryId !== null || $subcategoryId !== null || $collection === 'ofertas') {
+            if ($categoryId !== null) {
+                $total = $this->products->countCategory($collection, $categoryId, $onlyAvailable, $subcategoryId);
+            } else {
+                $total = $subcategoryId !== null
+                    ? $this->products->countSubcategory($collection, $subcategoryId, $onlyAvailable)
+                    : $this->products->countOffers($onlyAvailable);
+            }
             $pagination['total'] = $total;
             $pagination['total_pages'] = (int) ceil($total / $limit);
+            $pagination['has_more'] = $page * $limit < $total;
+            $pagination['next_page'] = $pagination['has_more'] ? $page + 1 : null;
         }
         $items = array();
 
@@ -100,6 +146,7 @@ class ProductService
             'ahorro' => $hasDiscount && $finalPrice < $price ? round($price - $finalPrice, 2) : 0,
             'visitas' => (int) $row['visitas'],
             'estatus' => (int) $row['estatus'],
+            'disponible' => (int) $row['estatus'] === 1,
             'minimo' => (int) $row['minimo'],
             'sub_categoria' => $row['sub_categoria'] === null ? null : (int) $row['sub_categoria'],
             'promo' => (int) $row['promo'],

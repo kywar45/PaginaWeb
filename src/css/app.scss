@@ -1037,10 +1037,11 @@ body {
   color: var(--q-primary);
 }
 
-// Full-width category menu, aligned with the reference storefront.
+// Ajusta esta variable para cambiar el ancho del menu de categorias.
 .sn-catalog-popup {
-  left: max(16px, calc((100vw - 1440px) / 2)) !important;
-  width: min(1440px, calc(100vw - 32px));
+  --catalog-menu-width: 1200px;
+  left: max(16px, calc((100vw - var(--catalog-menu-width)) / 2)) !important;
+  width: min(var(--catalog-menu-width), calc(100vw - 32px));
   max-width: calc(100vw - 32px) !important;
   border-radius: 12px;
   box-shadow: 0 14px 40px #4a1c3833;
@@ -1049,6 +1050,7 @@ body {
   overscroll-behavior: contain;
 }
 .sn-catalog-popup .catalog-menu {
+  grid-template-columns: 280px minmax(0, 1fr) 280px;
   box-shadow: none;
 }
 .sn-catalog-backdrop {
@@ -1354,8 +1356,8 @@ body {
 
 /* ---------- Category popup ---------- */
 .sn-catalog-popup {
-  left: max(18px, (100vw - 1500px) / 2 + 30px) !important;
-  width: min(1440px, 100vw - 60px) !important;
+  left: max(30px, calc((100vw - var(--catalog-menu-width)) / 2)) !important;
+  width: min(var(--catalog-menu-width), calc(100vw - 60px)) !important;
   max-width: calc(100vw - 60px) !important;
   overflow-x: hidden;
   overflow-y: auto;
@@ -1579,11 +1581,10 @@ body {
 
 /* ---------- Mobile bottom nav ---------- */
 .sn-mobile-nav {
-  border: 0 !important;
-  border-top: 1px solid #e9dfe0 !important;
-  border-radius: 0 !important;
+  border: 1px solid #f1dce4 !important;
+  border-radius: 24px !important;
   background: rgba(255, 255, 255, 0.97) !important;
-  box-shadow: 0 -5px 20px rgba(57, 37, 40, 0.075) !important;
+  box-shadow: 0 8px 28px rgba(93, 38, 60, 0.16) !important;
   backdrop-filter: blur(12px);
 }
 
@@ -1634,14 +1635,14 @@ body {
 
 @media (max-width: 1023px) {
   .q-page {
-    padding-bottom: 78px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 
   .sn-mobile-nav {
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    left: max(12px, calc((100vw - 480px) / 2)) !important;
+    right: max(12px, calc((100vw - 480px) / 2)) !important;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: 0;
   }
 }
 
@@ -2364,12 +2365,8 @@ body,
   min-width: 210px !important;
   min-height: 44px !important;
   border-radius: 9px 9px 0 0 !important;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.22),
-    rgba(255, 255, 255, 0.14)
-  ) !important;
-  color: #fff !important;
+  background: #fff !important;
+  color: #c91e54 !important;
   font-size: 12px !important;
   font-weight: 700 !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
@@ -2388,11 +2385,19 @@ body,
   color: #fff !important;
 }
 
-.sn-desktop-nav__link:hover,
-.sn-all-category-trigger:hover,
-.sn-category-trigger--active {
+.sn-desktop-nav__link:hover {
   background: rgba(255, 255, 255, 0.16) !important;
   color: #fff !important;
+}
+
+.sn-all-category-trigger .q-icon {
+  color: #c91e54 !important;
+}
+
+.sn-all-category-trigger:hover,
+.sn-all-category-trigger.sn-category-trigger--active {
+  background: #fff0f5 !important;
+  color: #c91e54 !important;
 }
 
 .sn-desktop-nav__link .q-badge {
@@ -2587,9 +2592,195 @@ body,
 
 /* ---------- MÓVIL: misma identidad ---------- */
 @media (max-width: 1023px) {
+  .sn-mobile-nav {
+    padding: 6px;
+    border-color: rgba(244, 63, 111, 0.12) !important;
+    border-radius: 26px !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    box-shadow:
+      0 12px 32px rgba(88, 36, 57, 0.14),
+      0 2px 6px rgba(88, 36, 57, 0.04) !important;
+  }
+
+  .sn-mobile-nav .q-tabs {
+    min-height: 56px;
+  }
+
+  .sn-mobile-nav .q-tabs__content {
+    gap: 3px;
+    overflow: visible;
+  }
+
+  .sn-mobile-nav .q-tabs__content > .q-tab {
+    flex: 1 1 0 !important;
+    max-width: none !important;
+    min-height: 56px;
+    padding: 5px 0;
+    border-radius: 19px;
+    color: #847780 !important;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+
+  .sn-mobile-nav .q-tabs__content > .q-tab--active {
+    background: #fff0f5;
+    color: #db2c61 !important;
+  }
+
+  .sn-mobile-nav .q-tab__icon {
+    font-size: 23px;
+  }
+
+  .sn-mobile-nav .q-tab__label {
+    margin-top: 3px;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    line-height: 1.3;
+    letter-spacing: 0;
+  }
+
+  .sn-mobile-nav .q-tab--active .q-tab__label {
+    font-weight: 700 !important;
+  }
+
+  .sn-mobile-nav .q-badge {
+    top: 3px;
+    right: 9px;
+    min-width: 17px;
+    height: 17px;
+    padding: 1px 4px;
+    border: 2px solid #fff;
+    background: #f43f6f !important;
+    font-size: 9px !important;
+  }
+
+  .sn-mobile-nav .q-tab:focus-visible {
+    outline: 2px solid #db2c61;
+    outline-offset: -2px;
+  }
+
+  .sn-mobile-head .sn-mobile-profile {
+    width: 36px;
+    height: 36px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+  }
+
+  .sn-mobile-delivery {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 12px 2px 8px;
+    color: #fff;
+    font-size: 12px;
+  }
+
+  .sn-mobile-delivery .q-icon {
+    font-size: 18px;
+  }
+
+  .sn-mobile-shortcuts {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    overflow-x: auto;
+    padding: 16px 2px 4px;
+    scrollbar-width: none;
+  }
+
+  .sn-mobile-shortcuts > a,
+  .sn-mobile-shortcuts > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .sn-mobile-shortcuts__offers {
+    position: relative;
+  }
+
+  .sn-mobile-shortcuts__hot {
+    position: absolute;
+    top: -12px;
+    right: 0;
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: #fff;
+    color: #c91e54;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .sn-mobile-shortcuts > a,
+  .sn-mobile-shortcuts > button {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .sn-mobile-head__row {
+    display: flex;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .sn-mobile-head__row > .q-btn {
+    position: static;
+    flex-shrink: 0;
+    transform: none;
+  }
+
+  .sn-mobile-head__actions {
+    position: static;
+    min-width: 36px;
+    flex-shrink: 0;
+    transform: none;
+  }
+
+  .sn-mobile-head__search {
+    // Ajusta este valor para cambiar la altura del buscador movil.
+    --mobile-search-height: 36px;
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .sn-mobile-head__search .q-field__control {
+    height: var(--mobile-search-height) !important;
+    min-height: var(--mobile-search-height) !important;
+    border-radius: 22px !important;
+    box-shadow: none;
+  }
+
+  .sn-mobile-head__search .q-field__marginal {
+    height: var(--mobile-search-height) !important;
+  }
+
+  .sn-mobile-head__row .sn-mobile-head__search .q-icon {
+    color: #777 !important;
+    font-size: 21px;
+  }
+
+  .sn-mobile-head__search input {
+    font-size: 13px;
+  }
+
   .sn-mobile-head {
     background:
-      linear-gradient(150deg, rgba(255, 255, 255, 0.07), transparent 30%),
+      linear-gradient(158deg, transparent 0 17%, rgba(255, 255, 255, 0.08) 17.4% 20.4%, transparent 20.8% 34%, rgba(255, 255, 255, 0.06) 34.4% 37%, transparent 37.4%),
+      linear-gradient(20deg, transparent 0 70%, rgba(255, 255, 255, 0.07) 70.4% 73.5%, transparent 74%),
+      radial-gradient(110% 72% at -2% 10%, transparent 63%, rgba(255, 255, 255, 0.14) 64%, rgba(255, 255, 255, 0.035) 66%, transparent 68%),
+      radial-gradient(115% 76% at 103% 94%, transparent 60%, rgba(255, 255, 255, 0.12) 61%, rgba(255, 255, 255, 0.03) 63%, transparent 65%),
+      radial-gradient(ellipse 100% 130% at 47% -20%, rgba(255, 126, 155, 0.68), rgba(255, 90, 131, 0.25) 43%, transparent 70%),
       linear-gradient(112deg, #ff527c 0%, #f43f6f 52%, #df2f61 100%) !important;
     border-bottom: 0 !important;
   }

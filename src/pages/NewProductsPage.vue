@@ -1,10 +1,8 @@
 <template>
   <q-page class="products-page">
     <section class="products-page__inner">
-      <div class="products-page__heading">
-        <h1><q-icon name="new_releases" /> Productos nuevos</h1>
-        <q-btn flat dense no-caps icon="arrow_back" label="Volver" to="/" />
-      </div>
+      <PageBreadcrumbs title="Productos nuevos" />
+      <h1 class="sr-only">Productos nuevos</h1>
 
       <div class="products-page__grid">
         <article
@@ -13,9 +11,9 @@
           class="offer-card"
           role="button"
           tabindex="0"
-          @click="selectedProduct = product"
-          @keydown.enter="selectedProduct = product"
-          @keydown.space.prevent="selectedProduct = product"
+          @click="openProduct(product)"
+          @keydown.enter="openProduct(product)"
+          @keydown.space.prevent="openProduct(product)"
         >
           <div class="offer-image">
             <div class="card-badges">
@@ -32,14 +30,7 @@
               @error="useFallbackImage"
             />
           </div>
-          <div class="offer-body">
-            <h2>{{ product.nombre }}</h2>
-            <p>{{ product.codigo }}</p>
-            <del v-if="product.tiene_descuento">{{ money(product.precio_normal) }}</del>
-            <strong class="offer-price" :class="{ 'price--sale': product.tiene_descuento }">
-              {{ money(product.precio_final) }}
-            </strong>
-          </div>
+          <ProductCardInfo :product="product" />
         </article>
       </div>
       <div v-if="products.length" class="products-page__pagination">
@@ -59,30 +50,15 @@
       </div>
     </section>
 
-    <q-dialog :model-value="!!selectedProduct" @update:model-value="selectedProduct = null">
-      <q-card v-if="selectedProduct" class="product-dialog">
-        <q-card-section class="row justify-end">
-          <q-btn flat round icon="close" v-close-popup aria-label="Cerrar" />
-        </q-card-section>
-        <q-card-section>
-          <img
-            class="product-dialog__image"
-            :src="selectedProduct.imagen"
-            :alt="selectedProduct.nombre"
-            @error="useFallbackImage"
-          />
-          <h2>{{ selectedProduct.nombre }}</h2>
-          <p>{{ selectedProduct.codigo }}</p>
-          <strong :class="{ 'price--sale': selectedProduct.tiene_descuento }">
-            {{ money(selectedProduct.precio_final) }}
-          </strong>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
+
   </q-page>
 </template>
 
 <script setup>
+import { useProductNavigation } from 'src/services/productNavigation'
+const openProduct = useProductNavigation()
+import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
+import ProductCardInfo from 'src/components/ProductCardInfo.vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import SaleBadge from 'src/components/SaleBadge.vue'
 import NewBadge from 'src/components/NewBadge.vue'
@@ -99,8 +75,7 @@ const pageCount = computed(() => Math.ceil(products.value.length / pageSize))
 const pagedProducts = computed(() =>
   products.value.slice((page.value - 1) * pageSize, page.value * pageSize),
 )
-const selectedProduct = ref(null)
-const fallbackProductImage = publicAsset('img/logob.png')
+const fallbackProductImage = publicAsset('img/product-no-image.svg')
 
 onMounted(async () => {
   try {
@@ -120,11 +95,9 @@ onBeforeUnmount(() => {
   request.abort()
 })
 
-const money = (value) => value.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
 
 function changePage(value) {
   page.value = value
-  selectedProduct.value = null
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -138,6 +111,7 @@ function useFallbackImage(event) {
 </script>
 
 <style scoped lang="scss">
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .products-page__pagination {
   display: flex;
   flex-direction: column;
@@ -370,5 +344,9 @@ function useFallbackImage(event) {
   .offer-body {
     padding: 8px 9px 10px;
   }
+}
+
+.offer-card:not(.offer-card--see-all) .offer-image {
+  background: linear-gradient(180deg, #fff, #fff9fb) !important;
 }
 </style>

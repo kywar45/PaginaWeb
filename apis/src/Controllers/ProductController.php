@@ -20,11 +20,18 @@ class ProductController
     public function index()
     {
         try {
+            if (array_key_exists('id_producto', $_GET)) {
+                $id = $this->integerQuery('id_producto', null, 1, 2147483647);
+                return Response::success($this->service->getProduct($id), 200);
+            }
             $collection = $this->collectionQuery('coleccion', 'recientes');
             $page = $this->integerQuery('page', 1, 1, 1000000);
-            $limit = $this->integerQuery('limit', 20, 1, 100);
+            $subcategoryId = $this->integerQuery('id_subcategoria', null, 1, 2147483647);
+            $categoryId = $this->integerQuery('id_categoria', null, 1, 2147483647);
+            $onlyAvailable = $this->integerQuery('solo_disponibles', 0, 0, 1) === 1;
+            $limit = $this->integerQuery('limit', ($subcategoryId === null && $categoryId === null) ? 20 : 30, 1, 100);
 
-            return Response::success($this->service->listProducts($collection, $page, $limit), 200);
+            return Response::success($this->service->listProducts($collection, $page, $limit, $subcategoryId, $onlyAvailable, $categoryId), 200);
         } catch (ApiException $e) {
             return Response::error($e->getErrorCodeName(), $e->getMessage(), $e->getStatus());
         }

@@ -715,12 +715,16 @@ function selectTile(tile) {
     padding: 12px;
   }
   .catalog-menu__category {
-    min-height: 40px;
-    padding-block: 7px;
+    min-height: 34px;
+    gap: 8px;
+    padding: 5px 8px;
+    font-size: 13px !important;
   }
   .catalog-menu__offers {
-    min-height: 74px;
-    padding: 11px;
+    min-height: 76px;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 12px;
   }
   .catalog-menu__offer-seal {
     width: 40px;
@@ -748,13 +752,20 @@ function selectTile(tile) {
     margin-bottom: 5px;
   }
   .catalog-menu__promotion {
-    min-height: 672px;
+    min-height: 0;
   }
   .catalog-menu__campaign {
-    min-height: 490px;
+    min-height: 400px;
+  }
+  .catalog-menu__campaign-category {
+    top: 100px;
+    height: 170px;
   }
   .catalog-menu__campaign-brand {
-    margin-top: 26px;
+    margin-top: 18px;
+  }
+  .catalog-menu__campaign-brand p {
+    font-size: 29px;
   }
   .catalog-menu__bestseller {
     width: 84px;
@@ -762,15 +773,18 @@ function selectTile(tile) {
     margin-top: 34px;
   }
   .catalog-menu__campaign-bottom {
-    padding: 16px 22px 20px;
+    padding: 12px 18px 14px;
   }
   .catalog-menu__campaign-bottom ul {
-    gap: 13px;
-    margin-bottom: 18px;
+    gap: 8px;
+    margin-bottom: 12px;
   }
   .catalog-menu__benefits {
-    gap: 11px;
-    padding: 17px 22px;
+    gap: 8px;
+    padding: 12px 18px;
+  }
+  .catalog-menu__benefits .q-icon {
+    font-size: 23px;
   }
 }
 @media (min-width: 1024px) and (max-width: 1240px) {

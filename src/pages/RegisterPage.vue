@@ -1,6 +1,7 @@
 <template>
   <q-page class="register-page">
     <div class="register-page__shell">
+      <PageBreadcrumbs title="Crear cuenta" back-to="/login" :parents="[{ label: 'Iniciar sesión', to: '/login' }]" />
       <div class="register-page__card">
         <div class="register-page__header">
           <div>
@@ -81,6 +82,7 @@
 </template>
 
 <script setup>
+import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 

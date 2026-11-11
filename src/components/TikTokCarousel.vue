@@ -282,12 +282,12 @@ function handlePlayerMessage(event) {
 }
 @media (max-width: 599px) {
   .tiktok-carousel-arrow {
-    width: 42px;
-    height: 42px;
-    min-height: 42px;
+    width: 34px;
+    height: 34px;
+    min-height: 34px;
   }
   .tiktok-carousel-arrow :deep(.q-icon) {
-    font-size: 25px;
+    font-size: 22px;
   }
   .tiktok-carousel-arrow--previous {
     left: -10px;
@@ -303,8 +303,19 @@ function handlePlayerMessage(event) {
     font-size: 14px;
   }
   .tiktok-rail {
-    grid-auto-columns: min(62vw, 240px);
+    grid-auto-columns: min(44vw, 170px);
     gap: 8px;
+  }
+  .tiktok-card__title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    min-height: 44px;
+    max-height: 44px;
+    padding: 7px 8px;
+    font-size: 11px;
+    line-height: 15px;
   }
 }
 </style>

@@ -20,48 +20,39 @@
             flat
             round
             dense
-            icon="menu"
+            :icon="accountInitials ? undefined : 'person_outline'"
+            :label="accountInitials || undefined"
             color="dark"
-            @click="leftDrawerOpen = !leftDrawerOpen"
+            class="sn-mobile-profile"
+            aria-label="Mi cuenta"
+            @click="goToAccount"
           />
 
-          <div class="sn-mobile-logo" @click="$router.push('/')">
-            <img src="img/logob.png" alt="Importadora Supernova" />
-          </div>
-
-          <div class="sn-mobile-head__actions">
-            <button
-              class="sn-mobile-icon-btn"
-              type="button"
-              aria-label="Buscar"
-              @click="focusMobileSearch"
-            >
+          <q-input
+            v-model="searchQuery"
+            outlined
+            rounded
+            dense
+            placeholder="Buscar en Supernova"
+            aria-label="Buscar productos"
+            class="sn-mobile-head__search"
+            bg-color="white"
+          >
+            <template #prepend>
               <q-icon name="search" />
-            </button>
-            <button class="sn-mobile-icon-btn" type="button" aria-label="Carrito">
-              <q-icon name="shopping_cart" />
-              <q-badge color="primary" floating rounded style="font-size: 10px">{{
-                cartCount
-              }}</q-badge>
-              <q-tooltip>Ver carrito</q-tooltip>
-            </button>
-          </div>
-        </div>
+            </template>
+          </q-input>
 
-        <q-input
-          ref="mobileSearchInput"
-          v-model="searchQuery"
-          filled
-          rounded
-          dense
-          placeholder="Buscar productos, marcas y más..."
-          class="sn-mobile-head__search"
-          bg-color="white"
-        >
-          <template #append>
-            <q-icon name="search" color="grey-7" />
-          </template>
-        </q-input>
+        </div>
+        <nav class="sn-mobile-shortcuts" aria-label="Secciones de la tienda">
+          <RouterLink to="/ofertas" class="sn-mobile-shortcuts__offers">
+            <q-icon name="local_offer" /> Ofertas
+          </RouterLink>
+          <RouterLink to="/nuevos"><q-icon name="shield" /> Nuevos</RouterLink>
+          <button type="button"><q-icon name="trending_up" /> Más vendidos</button>
+          <button type="button"><q-icon name="workspace_premium" /> Marcas</button>
+          <button type="button"><q-icon name="storefront" /> Sucursales</button>
+        </nav>
       </div>
 
       <!-- Toolbar principal -->
@@ -132,7 +123,7 @@
               style="min-width: fit-content; cursor: pointer"
               @click="$router.push('/')"
             >
-              <img src="img/logob.png" alt="Importadora Supernova" width="180px" />
+              <img :src="publicAsset('img/logob.png')" alt="Importadora Supernova" width="180px" />
             </div>
 
             <!-- Separador flexible (desktop) -->
@@ -202,6 +193,7 @@
               flat
               round
               icon="shopping_cart"
+              to="/carrito"
               color="dark"
               size="md"
               class="q-ml-xs sn-cart-btn sn-header-icon-btn"
@@ -275,7 +267,6 @@
             class="sn-desktop-nav__link"
             @click="showOffers"
           >
-            <q-badge color="primary" label="HOT" floating />
           </q-btn>
           <q-btn flat no-caps icon="shield" label="Nuevos" to="/nuevos" class="sn-desktop-nav__link" />
           <q-btn
@@ -306,32 +297,7 @@
       />
     </Teleport>
 
-    <q-dialog :model-value="!!menuProduct" @update:model-value="menuProduct = null">
-      <q-card v-if="menuProduct" style="width: 420px; max-width: 94vw">
-        <q-card-section class="row justify-end">
-          <q-btn flat round icon="close" v-close-popup aria-label="Cerrar" />
-        </q-card-section>
-        <q-card-section>
-          <StoreMenuProductImage
-            :index="menuProduct.spriteIndex"
-            :label="menuProduct.nombre"
-            style="width: 220px; margin: 0 auto"
-          />
-          <h2 class="text-h6">{{ menuProduct.nombre }}</h2>
-          <p class="text-grey-7">
-            Consulta la disponibilidad y el precio vigente con nuestro equipo.
-          </p>
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn
-            no-caps
-            color="primary"
-            label="Consultar disponibilidad"
-            href="tel:+525524954670"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+
 
     <!-- ════════════════════════════════ DRAWER MOBILE ══════════════════════════════ -->
     <q-drawer v-model="leftDrawerOpen" bordered :width="290" class="lt-md">
@@ -486,24 +452,10 @@
     <!-- ══════════════════════════════════ FOOTER ════════════════════════════════════ -->
     <q-footer bordered :elevated="false" class="sn-footer sn-footer--premium">
       <!-- DESKTOP FOOTER -->
-      <section class="sn-brand-strip gt-sm" aria-label="Nuestras marcas">
-        <div class="sn-brand-strip__inner">
-          <h2>NUESTRAS MARCAS</h2>
-          <div class="sn-brand-strip__logos">
-            <img
-              v-for="brand in footerBrandLogos"
-              :key="brand.name"
-              :src="brand.image"
-              :alt="brand.name"
-              loading="lazy"
-            />
-          </div>
-        </div>
-      </section>
       <div class="sn-footer-desktop gt-sm">
         <div class="sn-footer-grid">
           <div class="sn-footer-identity">
-            <img src="img/logob.png" alt="Importadora Supernova" class="sn-footer-logo" />
+            <img :src="publicAsset('img/logob.png')" alt="Importadora Supernova" class="sn-footer-logo" />
             <p class="sn-footer-motto">Estamos,<br />aquí para tí ♡</p>
           </div>
           <div>
@@ -590,10 +542,10 @@
           active-color="primary"
           indicator-color="transparent"
         >
-          <q-tab name="home" icon="home" label="Inicio" />
-          <q-tab name="search" icon="format_list_bulleted" label="Categorías" />
+          <q-tab name="home" icon="home" label="Inicio" @click="goToHome" />
+          <q-tab name="search" icon="format_list_bulleted" label="Categorías" @click="goToCategories" />
           <q-tab name="fav" icon="favorite_border" label="Favoritos" />
-          <q-tab name="cart" icon="shopping_cart" label="Carrito">
+          <q-tab name="cart" icon="shopping_cart" label="Carrito" @click="router.push('/carrito')">
             <q-badge color="primary" floating rounded style="font-size: 10px">{{
               cartCount
             }}</q-badge>
@@ -606,12 +558,16 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { publicAsset } from 'src/utils/publicAsset'
+import { useProductNavigation } from 'src/services/productNavigation'
+import { useCart } from 'src/services/cart'
+const openProduct = useProductNavigation()
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { catalogLocation } from 'src/utils/catalogRoutes'
 import { mockCategories } from 'src/data/mockStore'
 import { menuFallbackCategories } from 'src/data/categoryMenu'
 import StoreCategoryMenu from 'src/components/StoreCategoryMenu.vue'
-import StoreMenuProductImage from 'src/components/StoreMenuProductImage.vue'
 import { getCategories } from 'src/services/categoryApi'
 import { useAuthSession } from 'src/services/authSession'
 
@@ -621,17 +577,15 @@ const { currentUser, loadCurrentUser } = useAuthSession()
 const leftDrawerOpen = ref(false)
 const searchQuery = ref('')
 const searchOpen = ref(false)
-const mobileSearchInput = ref(null)
 const activeCategory = ref('all')
 const activeSubcategory = ref('')
 const mobileTab = ref('home')
-const cartCount = ref(0)
+const { cartCount } = useCart()
 const categoriesMenu = ref(false)
 const categoryRequest = new AbortController()
 
 // Entrada fija "Todos" que siempre encabeza la lista
 const categories = ref(menuFallbackCategories)
-const menuProduct = ref(null)
 
 const accountName = computed(() => {
   const user = currentUser.value
@@ -644,6 +598,15 @@ const accountName = computed(() => {
 
 const accountGreeting = computed(() => {
   return accountName.value ? `Hola, ${accountName.value}` : 'Mi cuenta'
+})
+
+const accountInitials = computed(() => {
+  const user = currentUser.value
+  if (!user) return ''
+  return [user.nombre, user.apellido]
+    .map((value) => Array.from(String(value || '').trim())[0] || '')
+    .join('')
+    .toLocaleUpperCase('es-MX')
 })
 
 onMounted(async () => {
@@ -665,16 +628,24 @@ onBeforeUnmount(() => {
   categoryRequest.abort()
 })
 
-watch(mobileTab, (tab) => {
-  if (tab === 'home') {
-    router.push('/')
-    return
-  }
+const route = useRoute()
+watch(() => route.path, (path) => {
+  if (path === '/categorias' || path === '/subcategoria' || path.startsWith('/catalogo/')) mobileTab.value = 'search'
+  else if (path === '/') mobileTab.value = 'home'
+  else if (path === '/carrito') mobileTab.value = 'cart'
+  else if (['/login', '/register', '/panel'].includes(path)) mobileTab.value = 'user'
+  else mobileTab.value = ''
+}, { immediate: true })
 
-  if (tab === 'search') {
-    leftDrawerOpen.value = true
-  }
-})
+function goToCategories() {
+  leftDrawerOpen.value = false
+  router.push('/categorias')
+}
+
+function goToHome() {
+  leftDrawerOpen.value = false
+  router.push('/')
+}
 
 const footerContacts = [
   {
@@ -729,27 +700,19 @@ const footerStores = [
 ]
 
 const footerSocialLinks = [
-  { name: 'Facebook', image: 'img/facebook.png', href: '#' },
-  { name: 'Instagram', image: 'img/instagram.png', href: '#' },
-  { name: 'TikTok', image: 'img/tiktok.png', href: '#' },
-  { name: 'YouTube', image: 'img/youtube.png', href: '#' },
+  { name: 'Facebook', image: publicAsset('img/facebook.png'), href: '#' },
+  { name: 'Instagram', image: publicAsset('img/instagram.png'), href: '#' },
+  { name: 'TikTok', image: publicAsset('img/tiktok.png'), href: '#' },
+  { name: 'YouTube', image: publicAsset('img/youtube.png'), href: '#' },
 ]
 
-const footerBrandLogos = [
-  { name: 'Le Reveur', image: 'img/le-reveur.png' },
-  { name: 'Le Mussa', image: 'img/le-mussa.png' },
-  { name: 'Wing Star', image: 'img/wing-star.png' },
-]
+
 
 function closeSearch() {
   searchOpen.value = false
   searchQuery.value = ''
 }
 
-async function focusMobileSearch() {
-  await nextTick()
-  mobileSearchInput.value?.focus?.()
-}
 
 function goToAccount() {
   leftDrawerOpen.value = false
@@ -764,15 +727,24 @@ function selectCategory(slug) {
 }
 
 function selectCategoryFromMenu(slug) {
-  selectCategory(slug)
+  const category = categories.value.find(item => item.slug === slug)
+  const id = category?.id_categoria ?? category?.id
   categoriesMenu.value = false
+  if (id) router.push(catalogLocation(category, null, 1, categories.value))
+  else router.push('/categorias')
 }
 
 function selectSubcategory(categorySlug, subSlug) {
+  const category = categories.value.find((item) => item.slug === categorySlug)
+  const subcategory = category?.subcategories?.find((item) => item.slug === subSlug)
+  const categoryId = category?.id_categoria ?? category?.id
+  const subcategoryId = subcategory?.id_subcategoria ?? subcategory?.id
+  if (!categoryId || !subcategoryId) return
   activeCategory.value = categorySlug
   activeSubcategory.value = subSlug
   leftDrawerOpen.value = false
-  router.push({ path: '/', query: { category: categorySlug, subcategory: subSlug } })
+  categoriesMenu.value = false
+  router.push(catalogLocation(category, subcategory, 1, categories.value))
 }
 
 function selectSubcategoryFromMenu(categorySlug, subSlug) {
@@ -782,7 +754,7 @@ function selectSubcategoryFromMenu(categorySlug, subSlug) {
 
 function showMenuProduct(product) {
   categoriesMenu.value = false
-  menuProduct.value = product
+  openProduct(product)
 }
 
 async function showOffers() {

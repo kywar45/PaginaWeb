@@ -5,7 +5,20 @@ const routes = [
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
       { path: 'ofertas', component: () => import('pages/OffersPage.vue') },
+      { path: 'carrito', component: () => import('pages/CartPage.vue') },
       { path: 'nuevos', component: () => import('pages/NewProductsPage.vue') },
+      { path: 'categorias', component: () => import('pages/CategoriesPage.vue') },
+      {
+        path: 'producto/:id(\\d+)/:slug?',
+        name: 'producto',
+        component: () => import('pages/ProductPage.vue'),
+      },
+      { path: 'subcategoria', component: () => import('pages/SubcategoryProductsPage.vue') },
+      {
+        path: 'catalogo/:categoriaSlug/:subcategoriaSlug?',
+        name: 'catalogo',
+        component: () => import('pages/SubcategoryProductsPage.vue'),
+      },
       { path: 'login', component: () => import('pages/LoginPage.vue') },
       { path: 'panel', component: () => import('pages/AccountPage.vue') },
       { path: 'register', component: () => import('pages/RegisterPage.vue') },

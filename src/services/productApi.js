@@ -1,7 +1,7 @@
 import { publicAsset } from 'src/utils/publicAsset'
 
 const DEFAULT_API_BASE_URL = 'https://www.importadorasupernova.com/StoreApi/v1'
-const FALLBACK_IMAGE = publicAsset('img/logob.png')
+const FALLBACK_IMAGE = publicAsset('img/product-no-image.svg')
 
 function normalizeProduct(row) {
   const price = Number(row.precio_normal) || 0
@@ -12,7 +12,8 @@ function normalizeProduct(row) {
     id_producto: row.id_producto ?? row.id,
     nombre: String(row.nombre || '').trim(),
     codigo: String(row.codigo || '').trim(),
-    imagen: row.imagen || FALLBACK_IMAGE,
+    imagen:
+      typeof row.imagen === 'string' && row.imagen.trim() ? row.imagen.trim() : FALLBACK_IMAGE,
     precio_normal: price,
     precio_final: finalPrice,
     precio_mayoreo: Number(row.precio_mayoreo) || 0,
@@ -21,16 +22,32 @@ function normalizeProduct(row) {
     porcentaje_descuento: Number(row.porcentaje_descuento) || 0,
     ahorro: Number(row.ahorro) || 0,
     visitas: Number(row.visitas) || 0,
+    estatus: row.estatus === undefined || row.estatus === null ? null : Number(row.estatus),
   }
 }
 
-export async function getProducts({ coleccion = 'recientes', page = 1, limit = 20, signal } = {}) {
+export async function getProducts({
+  coleccion = 'recientes',
+  page = 1,
+  limit = 20,
+  id_subcategoria,
+  id_categoria,
+  solo_disponibles = false,
+  signal,
+} = {}) {
   const base = (import.meta.env.VITE_STORE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')
   const params = new URLSearchParams({
     coleccion,
     page: String(page),
     limit: String(limit),
   })
+  if (id_subcategoria !== undefined && id_subcategoria !== null)
+    params.set('id_subcategoria', String(id_subcategoria))
+
+  if (id_categoria !== undefined && id_categoria !== null)
+    params.set('id_categoria', String(id_categoria))
+
+  if (solo_disponibles) params.set('solo_disponibles', '1')
 
   const response = await fetch(`${base}/productos?${params}`, {
     headers: { Accept: 'application/json' },
@@ -46,6 +63,33 @@ export async function getProducts({ coleccion = 'recientes', page = 1, limit = 2
     productos: payload.data.productos.map(normalizeProduct),
     pagination: payload.data.pagination,
   }
+}
+
+export async function getProduct(id, { signal } = {}) {
+  const base = (import.meta.env.VITE_STORE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')
+  const response = await fetch(
+    `${base}/productos?${new URLSearchParams({ id_producto: String(id) })}`,
+    {
+      headers: { Accept: 'application/json' },
+      signal,
+    },
+  )
+  const payload = await response.json()
+  if (!response.ok || payload?.success !== true || !payload.data?.producto) {
+    const error = new Error(payload?.error?.message || 'No se pudo cargar el producto.')
+    error.status = response.status
+    throw error
+  }
+  const product = normalizeProduct(payload.data.producto)
+  product.variantes = Array.isArray(product.variantes)
+    ? product.variantes.map(normalizeProduct)
+    : []
+  product.relacionados = Array.isArray(product.relacionados)
+    ? product.relacionados.map(normalizeProduct)
+    : []
+  product.imagenes =
+    Array.isArray(product.imagenes) && product.imagenes.length ? product.imagenes : [product.imagen]
+  return product
 }
 
 export async function getRandomSubcategoryProducts({
@@ -66,7 +110,9 @@ export async function getRandomSubcategoryProducts({
   const payload = await response.json()
 
   if (!response.ok || payload?.success !== true || !Array.isArray(payload.data?.subcategorias)) {
-    throw new Error(payload?.error?.message || 'No se pudieron cargar las subcategorias aleatorias.')
+    throw new Error(
+      payload?.error?.message || 'No se pudieron cargar las subcategorias aleatorias.',
+    )
   }
 
   return payload.data.subcategorias

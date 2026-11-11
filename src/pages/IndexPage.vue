@@ -8,7 +8,9 @@
       <section id="ofertas" class="daily-offers">
         <div class="section-heading">
           <h2>
-            <q-icon name="bolt" color="primary" /> OFERTAS DEL DIA
+            <q-icon name="bolt" color="primary" />
+            <span class="gt-xs">OFERTAS DEL DIA</span>
+            <span class="lt-sm">Ofertas del día</span>
             <RouterLink to="/ofertas" class="section-heading__link">
               Ver todas las ofertas <q-icon name="chevron_right" />
             </RouterLink>
@@ -42,9 +44,9 @@
               class="offer-card"
               role="button"
               tabindex="0"
-              @click="selectedProduct = product"
-              @keydown.enter="selectedProduct = product"
-              @keydown.space.prevent="selectedProduct = product"
+              @click="openProduct(product)"
+              @keydown.enter="openProduct(product)"
+              @keydown.space.prevent="openProduct(product)"
             >
               <div class="offer-image">
                 <SaleBadge class="card-sale-badge" :percentage="product.porcentaje_descuento" />
@@ -55,12 +57,7 @@
                   @error="useFallbackImage"
                 />
               </div>
-              <div class="offer-body">
-                <h3>{{ product.nombre }}</h3>
-                <p>{{ product.codigo }}</p>
-                <del>{{ money(product.precio_normal) }}</del
-                ><strong class="offer-price price--sale">{{ money(product.precio_final) }}</strong>
-              </div>
+              <ProductCardInfo :product="product" />
             </article>
             <RouterLink to="/ofertas" class="offer-card offer-card--see-all">
               <span class="offer-card--see-all__icon"><q-icon name="arrow_forward" /></span>
@@ -81,7 +78,9 @@
       <section id="nuevos" class="daily-offers">
         <div class="section-heading">
           <h2>
-            <q-icon name="new_releases" color="primary" /> PRODUCTOS NUEVOS
+            <q-icon name="new_releases" color="primary" />
+            <span class="gt-xs">PRODUCTOS NUEVOS</span>
+            <span class="lt-sm">Productos nuevos</span>
             <RouterLink to="/nuevos" class="section-heading__link">
               Ver todos los nuevos <q-icon name="chevron_right" />
             </RouterLink>
@@ -115,9 +114,9 @@
               class="offer-card"
               role="button"
               tabindex="0"
-              @click="selectedProduct = product"
-              @keydown.enter="selectedProduct = product"
-              @keydown.space.prevent="selectedProduct = product"
+              @click="openProduct(product)"
+              @keydown.enter="openProduct(product)"
+              @keydown.space.prevent="openProduct(product)"
             >
               <div class="offer-image">
                 <div class="card-badges">
@@ -134,14 +133,7 @@
                   @error="useFallbackImage"
                 />
               </div>
-              <div class="offer-body">
-                <h3>{{ product.nombre }}</h3>
-                <p>{{ product.codigo }}</p>
-                <del v-if="product.tiene_descuento">{{ money(product.precio_normal) }}</del
-                ><strong class="offer-price" :class="{ 'price--sale': product.tiene_descuento }">{{
-                  money(product.precio_final)
-                }}</strong>
-              </div>
+              <ProductCardInfo :product="product" />
             </article>
             <RouterLink to="/nuevos" class="offer-card offer-card--see-all">
               <span class="offer-card--see-all__icon"><q-icon name="arrow_forward" /></span>
@@ -167,79 +159,41 @@
           </div>
         </div>
         <div v-if="featuredViewedProduct" class="featured-products__layout">
-          <article
-            class="featured-product-main"
-            role="button"
-            tabindex="0"
-            @click="selectedProduct = featuredViewedProduct"
-            @keydown.enter="selectedProduct = featuredViewedProduct"
-            @keydown.space.prevent="selectedProduct = featuredViewedProduct"
-          >
+          <article class="featured-product-main" role="button" tabindex="0"
+            @click="openProduct(featuredViewedProduct)"
+            @keydown.enter="openProduct(featuredViewedProduct)"
+            @keydown.space.prevent="openProduct(featuredViewedProduct)">
             <div class="featured-product-main__copy">
-              <span class="featured-product-main__eyebrow"
-                ><q-icon name="auto_awesome" /> DESTACADO</span
-              >
-              <SaleBadge
-                v-if="featuredViewedProduct.tiene_descuento"
-                :percentage="featuredViewedProduct.porcentaje_descuento"
-              />
-              <h3>{{ featuredViewedProduct.nombre }}</h3>
-              <p>{{ featuredViewedProduct.descripcion || featuredViewedProduct.codigo }}</p>
+              <span class="featured-product-main__eyebrow"><q-icon name="auto_awesome" /> DESTACADO</span>
+              <h3 :title="featuredViewedProduct.nombre">{{ featuredViewedProduct.nombre }}</h3>
+              <p class="featured-product-main__code">{{ featuredViewedProduct.codigo }}</p>
+              <ProductViews :product="featuredViewedProduct" class="featured-product-main__visits" />
               <div class="featured-product-main__prices">
-                <strong :class="{ 'price--sale': featuredViewedProduct.tiene_descuento }">
-                  {{ money(featuredViewedProduct.precio_final) }}
-                </strong>
-                <del v-if="featuredViewedProduct.tiene_descuento">
-                  {{ money(featuredViewedProduct.precio_normal) }}
-                </del>
+                <strong :class="{ 'price--sale': featuredViewedProduct.tiene_descuento }">{{ money(featuredViewedProduct.precio_final) }}</strong>
+                <del v-if="featuredViewedProduct.tiene_descuento">{{ money(featuredViewedProduct.precio_normal) }}</del>
               </div>
-              <span class="featured-product-main__hint"
-                >Descubrir producto <q-icon name="arrow_forward"
-              /></span>
+              <span class="featured-product-main__hint">Descubrir producto <q-icon name="arrow_forward" /></span>
             </div>
             <div class="featured-product-main__image">
-              <img
-                :src="featuredViewedProduct.imagen"
-                :alt="featuredViewedProduct.nombre"
-                loading="lazy"
-                @error="useFallbackImage"
+              <SaleBadge
+                v-if="featuredViewedProduct.tiene_descuento"
+                class="card-sale-badge"
+                :percentage="featuredViewedProduct.porcentaje_descuento"
               />
+              <img :src="featuredViewedProduct.imagen" :alt="featuredViewedProduct.nombre" loading="lazy" @error="useFallbackImage" />
             </div>
           </article>
           <div class="featured-products__grid">
-            <article
-              v-for="product in secondaryViewedProducts"
-              :key="product.id_producto"
-              class="featured-mini-card"
-              role="button"
-              tabindex="0"
-              @click="selectedProduct = product"
-              @keydown.enter="selectedProduct = product"
-              @keydown.space.prevent="selectedProduct = product"
-            >
+            <article v-for="product in secondaryViewedProducts" :key="product.id_producto"
+              class="featured-mini-card" role="button" tabindex="0"
+              @click="openProduct(product)"
+              @keydown.enter="openProduct(product)"
+              @keydown.space.prevent="openProduct(product)">
               <div class="featured-mini-card__image">
-                <SaleBadge
-                  v-if="product.tiene_descuento"
-                  class="card-sale-badge"
-                  :percentage="product.porcentaje_descuento"
-                />
-                <img
-                  :src="product.imagen"
-                  :alt="product.nombre"
-                  loading="lazy"
-                  @error="useFallbackImage"
-                />
+                <SaleBadge v-if="product.tiene_descuento" class="card-sale-badge" :percentage="product.porcentaje_descuento" />
+                <img :src="product.imagen" :alt="product.nombre" loading="lazy" @error="useFallbackImage" />
               </div>
-              <div class="featured-mini-card__body">
-                <h3>{{ product.nombre }}</h3>
-                <p>{{ product.codigo }}</p>
-                <div class="featured-mini-card__prices">
-                  <strong :class="{ 'price--sale': product.tiene_descuento }">{{
-                    money(product.precio_final)
-                  }}</strong>
-                  <del v-if="product.tiene_descuento">{{ money(product.precio_normal) }}</del>
-                </div>
-              </div>
+              <ProductCardInfo :product="product" compact />
             </article>
           </div>
         </div>
@@ -264,15 +218,6 @@
             <span>SELECCIONADO PARA TI</span>
             <h2 id="random-categories-title">Quizás te pueda interesar</h2>
           </div>
-          <q-btn
-            flat
-            no-caps
-            icon="shuffle"
-            label="Mostrar otros"
-            class="random-categories__shuffle"
-            :loading="randomSubcategoriesLoading"
-            @click="loadRandomSubcategories"
-          />
         </div>
 
         <div
@@ -307,12 +252,15 @@
             </header>
 
             <div class="category-products-grid">
-              <button
+              <article
                 v-for="product in group.productos"
                 :key="product.id_producto"
-                type="button"
+                role="button"
+                tabindex="0"
                 class="category-product-card"
-                @click="selectedProduct = product"
+                @click="openProduct(product)"
+                @keydown.enter="openProduct(product)"
+                @keydown.space.prevent="openProduct(product)"
               >
                 <SaleBadge
                   v-if="product.tiene_descuento"
@@ -327,23 +275,8 @@
                     @error="useFallbackImage"
                   />
                 </span>
-                <span class="category-product-card__body">
-                  <strong>{{ product.nombre }}</strong>
-                  <small>{{ product.codigo }}</small>
-                  <del v-if="product.tiene_descuento">
-                    {{ money(product.precio_normal) }}
-                  </del>
-                  <span
-                    class="category-product-card__price"
-                    :class="{ 'price--sale': product.tiene_descuento }"
-                  >
-                    {{ money(product.precio_final) }}
-                  </span>
-                  <span class="category-product-card__action" aria-hidden="true">
-                    <q-icon name="arrow_forward" />
-                  </span>
-                </span>
-              </button>
+                <ProductCardInfo :product="product" compact />
+              </article>
             </div>
           </article>
         </div>
@@ -397,41 +330,6 @@
             label="Consultar catálogo"
             href="tel:+525524954670" /></q-card-actions></q-card
     ></q-dialog>
-    <q-dialog :model-value="!!selectedProduct" @update:model-value="selectedProduct = null"
-      ><q-card v-if="selectedProduct" class="store-dialog"
-        ><q-card-section class="row justify-end"
-          ><q-btn flat round icon="close" v-close-popup aria-label="Cerrar" /></q-card-section
-        ><q-card-section
-          ><StoreMenuProductImage
-            v-if="selectedProduct.spriteIndex !== undefined"
-            :index="selectedProduct.spriteIndex"
-            :label="selectedProduct.nombre"
-            style="width: 220px; margin: auto"
-          />
-          <img
-            v-else
-            class="detail-image"
-            :src="selectedProduct.imagen"
-            :alt="selectedProduct.nombre"
-            @error="useFallbackImage"
-          />
-          <h2 class="text-h6">{{ selectedProduct.nombre }}</h2>
-          <template v-if="selectedProduct.spriteIndex === undefined"
-            ><p>{{ selectedProduct.codigo }}</p>
-            <strong class="text-h5" :class="{ 'price--sale': selectedProduct.tiene_descuento }">{{
-              money(selectedProduct.precio_final)
-            }}</strong></template
-          >
-          <p v-else>
-            Consulta la disponibilidad y el precio vigente con nuestro equipo.
-          </p></q-card-section
-        ><q-card-actions align="right"
-          ><q-btn
-            no-caps
-            color="primary"
-            label="Consultar disponibilidad"
-            href="tel:+525524954670" /></q-card-actions></q-card
-    ></q-dialog>
     <q-dialog :model-value="!!selectedCollection" @update:model-value="selectedCollection = null"
       ><q-card v-if="selectedCollection" class="store-dialog"
         ><q-card-section class="row items-center"
@@ -447,10 +345,10 @@
             v-for="product in selectedCollection.products"
             :key="product.id_producto"
             class="mini-product"
-            @click="selectedProduct = product"
+            @click="openProduct(product)"
           >
             <img :src="product.imagen" :alt="product.nombre" @error="useFallbackImage" /><span
-              >{{ product.nombre }}<NewBadge /><SaleBadge
+              >{{ product.nombre }}<ProductViews :product="product" /><NewBadge /><SaleBadge
                 v-if="product.tiene_descuento"
                 :percentage="product.porcentaje_descuento"
               /><strong :class="{ 'price--sale': product.tiene_descuento }">{{
@@ -464,10 +362,13 @@
   </q-page>
 </template>
 <script setup>
+import { useProductNavigation } from 'src/services/productNavigation'
+const openProduct = useProductNavigation()
+import ProductCardInfo from 'src/components/ProductCardInfo.vue'
+import ProductViews from 'src/components/ProductViews.vue'
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import StoreMenuProductImage from 'src/components/StoreMenuProductImage.vue'
 import SaleBadge from 'src/components/SaleBadge.vue'
 import NewBadge from 'src/components/NewBadge.vue'
 import TikTokCarousel from 'src/components/TikTokCarousel.vue'
@@ -483,7 +384,6 @@ const route = useRoute()
 const router = useRouter()
 const selectedCategory = ref(null)
 const selectedSubcategory = ref(null)
-const selectedProduct = ref(null)
 const selectedCollection = ref(null)
 const banners = ref([])
 const bannersLoading = ref(true)
@@ -500,23 +400,27 @@ const categories = ref(menuFallbackCategories)
 const offerProducts = ref(mockOfferProducts)
 const newestProducts = ref(mockNewestProducts)
 const mostViewedProducts = ref(mockMostViewed)
+const featuredViewedProduct = computed(() => mostViewedProducts.value[0] || null)
+const secondaryViewedProducts = computed(() => mostViewedProducts.value.slice(1, 9))
 const randomSubcategoryGroups = ref([])
 const randomSubcategoriesLoading = ref(false)
-const fallbackProductImage = publicAsset('img/logob.png')
+const fallbackProductImage = publicAsset('img/product-no-image.svg')
 let randomCategoryRequest = null
 
-const mainBanners = computed(() => banners.value.filter((banner) => Number(banner.tipo) === 1))
+const mainBanners = computed(() => banners.value.filter((banner) => Number(banner.tipo) === 1).slice(0, 5))
 const advertisingBanners = computed(() =>
   banners.value
     .filter((banner) => Number(banner.tipo) === 2 && Number(banner.posicion) === 1)
     .slice(0, 1),
 )
-const featuredViewedProduct = computed(() => mostViewedProducts.value[0] || null)
-const secondaryViewedProducts = computed(() => mostViewedProducts.value.slice(1, 9))
 onMounted(async () => {
   const timeout = setTimeout(() => bannerRequest.abort(), 15000)
   try {
-    banners.value = await getBanners({ signal: bannerRequest.signal })
+    const results = await Promise.allSettled([
+      getBanners({ tipo: 1, maxItems: 5, signal: bannerRequest.signal }),
+      getBanners({ tipo: 2, maxItems: 1, signal: bannerRequest.signal }),
+    ])
+    banners.value = results.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
   } catch (error) {
     if (error.name !== 'AbortError') console.warn('No se pudieron cargar los banners.')
   } finally {
@@ -539,9 +443,9 @@ onMounted(async () => {
   const timeout = setTimeout(() => productRequest.abort(), 15000)
   try {
     const [offers, newest, viewed] = await Promise.all([
-      getProducts({ coleccion: 'ofertas', limit: 20, signal: productRequest.signal }),
-      getProducts({ coleccion: 'nuevos', limit: 20, signal: productRequest.signal }),
-      getProducts({ coleccion: 'vistos', limit: 12, signal: productRequest.signal }),
+      getProducts({ solo_disponibles: true, coleccion: 'ofertas', limit: 20, signal: productRequest.signal }),
+      getProducts({ solo_disponibles: true, coleccion: 'nuevos', limit: 20, signal: productRequest.signal }),
+      getProducts({ solo_disponibles: true, coleccion: 'vistos', limit: 12, signal: productRequest.signal }),
     ])
     offerProducts.value = offers.productos
     newestProducts.value = newest.productos
@@ -589,6 +493,7 @@ async function loadRandomSubcategories() {
         getCategories({ signal: randomCategoryRequest.signal }),
         ...[1, 2, 3, 4].map((page) =>
           getProducts({
+            solo_disponibles: true,
             coleccion: 'recientes',
             page,
             limit: 100,
@@ -1005,12 +910,12 @@ const money = (value) => value.toLocaleString('es-MX', { style: 'currency', curr
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: #d8d8d8;
+  background: #f8c6d4;
   cursor: pointer;
 }
 
 .offer-carousel-dots button[aria-current='true'] {
-  background: #3483fa;
+  background: #f43f6f;
 }
 
 .offer-carousel-shell {
@@ -3003,6 +2908,66 @@ const money = (value) => value.toLocaleString('es-MX', { style: 'currency', curr
     height: 95px;
   }
 }
+@media (max-width: 599px) {
+  .main-banner-container {
+    padding-inline: 12px;
+  }
+  .main-banner-container :deep(.banner-carousel:not(.banner-carousel--strip)) {
+    aspect-ratio: var(--mobile-banner-ratio, 16 / 9);
+    max-height: none;
+  }
+}
+
+@media (max-width: 599px) {
+  .daily-offers > .section-heading {
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .daily-offers > .section-heading h2 {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 3px 10px;
+    margin: 0;
+    color: #343039 !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    line-height: 1.3;
+  }
+  .daily-offers > .section-heading h2 > .q-icon {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    align-self: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #fff0f5;
+    color: #e62e64 !important;
+    font-size: 22px;
+  }
+  .daily-offers > .section-heading h2 > span {
+    grid-column: 2;
+  }
+  .daily-offers > .section-heading .section-heading__link {
+    grid-column: 2;
+    margin: 0;
+    padding: 0;
+    color: #d52a5c !important;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .daily-offers > .section-heading .section-heading__actions {
+    min-width: 0;
+    max-width: 84px;
+  }
+  .daily-offers > .section-heading .offer-carousel-dots {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 5px;
+  }
+}
+
 /* Presentación de categorías con los reflejos de la identidad Supernova. */
 .offer-card--see-all,
 .category-products-row:not(.category-products-row--loading) .category-products-row__intro {
@@ -3054,5 +3019,39 @@ const money = (value) => value.toLocaleString('es-MX', { style: 'currency', curr
 .offer-card--see-all__icon {
   background: rgba(255, 255, 255, .2) !important;
   box-shadow: none !important;
+}
+
+/* Tarjetas compactas de producto, compartidas por las tres colecciones. */
+.offer-card:not(.offer-card--see-all) .offer-image {
+  height: auto;
+  aspect-ratio: 1 / 1;
+  padding: 12px;
+  border-radius: 0;
+}
+.offer-card:not(.offer-card--see-all) .offer-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.offer-card:not(.offer-card--see-all) .offer-image {
+  background: linear-gradient(180deg, #fff, #fff9fb) !important;
+}
+
+.featured-mini-card {
+  gap: 0;
+  padding: 0;
+  grid-template-rows: 110px minmax(0, 1fr);
+}
+.featured-mini-card__image {
+  height: 110px;
+  background: linear-gradient(180deg, #fff, #fff9fb);
+}
+.featured-product-main__code {
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.featured-product-main__visits,
+.featured-product-main__visits :deep(.q-icon) {
+  color: #fff;
 }
 </style>

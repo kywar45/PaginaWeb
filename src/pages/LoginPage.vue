@@ -2,13 +2,12 @@
   <q-page class="login-page">
     <section class="login-shell">
       <aside class="login-brand gt-xs">
-        <button class="login-brand__home" type="button" @click="$router.push('/')">
-          <q-icon name="arrow_back" />
-          Volver a la tienda
-        </button>
-
         <div class="login-brand__content">
-          <img src="img/logob.png" alt="Importadora Supernova" class="login-brand__logo" />
+          <img
+            :src="publicAsset('img/logob.png')"
+            alt="Importadora Supernova"
+            class="login-brand__logo"
+          />
           <p class="login-brand__tagline">De todo para ti a precios para ti.</p>
           <h2>Tu cuenta Supernova, todo en un mismo lugar.</h2>
           <p class="login-brand__copy">
@@ -28,10 +27,7 @@
       </aside>
 
       <div class="login-form-wrap">
-        <div class="login-mobile-head lt-sm">
-          <q-btn flat round dense icon="arrow_back" aria-label="Volver" @click="$router.push('/')" />
-          <img src="img/logob.png" alt="Importadora Supernova" />
-        </div>
+        <PageBreadcrumbs title="Iniciar sesión" />
 
         <div class="login-heading">
           <span class="login-heading__icon"><q-icon name="person" /></span>
@@ -53,6 +49,7 @@
             stack-label
             color="primary"
             :rules="[validateEmail]"
+            hide-bottom-space
           >
             <template #prepend>
               <q-icon name="alternate_email" />
@@ -69,6 +66,7 @@
             stack-label
             color="primary"
             :rules="[validatePassword]"
+            hide-bottom-space
           >
             <template #prepend>
               <q-icon name="lock" />
@@ -131,6 +129,8 @@
 </template>
 
 <script setup>
+import { publicAsset } from 'src/utils/publicAsset'
+import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import authApi from 'src/services/authApi'
@@ -194,9 +194,7 @@ async function submitLogin() {
   align-items: center;
   justify-content: center;
   padding: clamp(28px, 4vw, 54px) 20px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 250, 0.96)),
-    #fff;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(255, 247, 250, 0.96)), #fff;
 }
 
 .login-shell {
@@ -514,6 +512,182 @@ async function submitLogin() {
   }
 }
 
+@media (min-width: 1024px) {
+  .login-page {
+    padding: 30px 24px 42px;
+    background: #fff;
+  }
+  .login-shell {
+    width: min(940px, 100%);
+    min-height: 550px;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    border-color: #f1dce5;
+    border-radius: 24px;
+    box-shadow: 0 16px 44px rgba(113, 43, 70, 0.08);
+  }
+  .login-brand {
+    padding: 36px 32px 28px;
+    background:
+      radial-gradient(
+        ellipse 100% 130% at 47% -20%,
+        rgba(255, 126, 155, 0.68),
+        rgba(255, 90, 131, 0.25) 43%,
+        transparent 70%
+      ),
+      linear-gradient(112deg, #ff4f79, #f43f6f 48%, #df2f61);
+  }
+  .login-brand::before {
+    position: absolute;
+    inset: -12% -8% -18%;
+    background:
+      linear-gradient(
+        158deg,
+        transparent 0 17%,
+        rgba(255, 255, 255, 0.07) 17.4% 20.4%,
+        transparent 20.8% 34%,
+        rgba(255, 255, 255, 0.05) 34.4% 37%,
+        transparent 37.4%
+      ),
+      linear-gradient(
+        20deg,
+        transparent 0 70%,
+        rgba(255, 255, 255, 0.06) 70.4% 73.5%,
+        transparent 74%
+      ),
+      radial-gradient(
+        110% 72% at -2% 10%,
+        transparent 63%,
+        rgba(255, 255, 255, 0.12) 64%,
+        rgba(255, 255, 255, 0.035) 66%,
+        transparent 68%
+      ),
+      radial-gradient(
+        115% 76% at 103% 94%,
+        transparent 60%,
+        rgba(255, 255, 255, 0.1) 61%,
+        rgba(255, 255, 255, 0.03) 63%,
+        transparent 65%
+      );
+    content: '';
+    pointer-events: none;
+  }
+  .login-brand::after {
+    display: none;
+  }
+  .login-brand__logo {
+    width: 210px;
+    margin-bottom: 10px;
+  }
+  .login-brand__tagline {
+    margin-bottom: 32px;
+    font-size: 13px;
+    color: #fff;
+  }
+  .login-brand h2 {
+    max-width: 280px;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.18;
+  }
+  .login-brand__copy {
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .login-brand__benefits {
+    gap: 14px;
+    margin-top: 26px;
+  }
+  .login-brand__benefits li {
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .login-brand__benefits .q-icon {
+    padding: 7px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.16);
+    font-size: 18px;
+  }
+  .login-brand__secure {
+    margin-top: 36px;
+    font-size: 10px;
+  }
+  .login-form-wrap {
+    padding: 28px 38px 30px;
+  }
+  .login-heading {
+    gap: 12px;
+    margin: 12px 0 24px;
+  }
+  .login-heading h1 {
+    font-size: 27px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #49303e;
+  }
+  .login-heading__icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+  }
+  .login-heading__eyebrow {
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .login-heading > div > p:last-child {
+    font-size: 12px;
+    color: #9b7d8b;
+  }
+  .login-form {
+    gap: 16px;
+  }
+  .login-form :deep(.q-field__control) {
+    border-radius: 13px;
+    background: #fffcfd;
+  }
+  .login-form :deep(.q-field__prepend),
+  .login-form :deep(.q-field__append) {
+    color: #e74776;
+  }
+  .login-form__options {
+    gap: 10px;
+    font-size: 11px;
+  }
+  .login-form__forgot {
+    font-weight: 600;
+  }
+  .login-form__submit,
+  .login-form__register {
+    min-height: 46px;
+    border-radius: 13px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: none;
+  }
+  .login-form__submit {
+    background:
+      linear-gradient(
+        158deg,
+        transparent 0 30%,
+        rgba(255, 255, 255, 0.1) 30.4% 36%,
+        transparent 36.4%
+      ),
+      linear-gradient(112deg, #ff4f79, #f43f6f 48%, #df2f61) !important;
+  }
+  .login-form__register {
+    background: #fff6f9 !important;
+    color: #d72c60 !important;
+  }
+  .login-form__register::before {
+    border-color: #f2cad8;
+  }
+  .login-form__divider {
+    font-size: 10px;
+  }
+  .login-form__support {
+    font-size: 10px;
+  }
+}
+
 @media (max-width: 599px) {
   .login-page {
     align-items: stretch;
@@ -522,7 +696,7 @@ async function submitLogin() {
   }
 
   .login-shell {
-    min-height: calc(100dvh - 78px);
+    min-height: 0;
     grid-template-columns: 1fr;
     border: 0;
     border-radius: 0;
@@ -531,7 +705,7 @@ async function submitLogin() {
 
   .login-form-wrap {
     justify-content: flex-start;
-    padding: 24px 20px 36px;
+    padding: 10px 16px 110px;
   }
 
   .login-mobile-head {
@@ -539,21 +713,111 @@ async function submitLogin() {
   }
 
   .login-heading {
-    align-items: flex-start;
-    margin-bottom: 26px;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    align-items: center;
+    gap: 12px;
+    margin: 4px 0 22px;
+    padding: 20px 16px;
+    border-radius: 20px;
+    background:
+      linear-gradient(
+        158deg,
+        transparent 0 17%,
+        rgba(255, 255, 255, 0.08) 17.4% 21%,
+        transparent 21.4% 44%,
+        rgba(255, 255, 255, 0.06) 44.4% 48%,
+        transparent 48.4%
+      ),
+      radial-gradient(
+        115% 76% at 103% 94%,
+        transparent 60%,
+        rgba(255, 255, 255, 0.13) 61%,
+        transparent 65%
+      ),
+      linear-gradient(112deg, #ff4f79, #f43f6f 48%, #df2f61);
   }
 
   .login-heading__icon {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
   }
 
   .login-heading h1 {
-    font-size: 26px;
+    color: #fff;
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .login-heading .login-heading__eyebrow {
+    color: #fff !important;
+    font-size: 9px !important;
+    letter-spacing: 0.08em;
+  }
+  .login-heading > div > p:last-child {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .login-form {
+    gap: 16px;
+  }
+  .login-form :deep(.q-field__control) {
+    border-radius: 14px;
+    background: #fffcfd;
+  }
+  .login-form :deep(.q-field__prepend),
+  .login-form :deep(.q-field__append) {
+    color: #e74776;
+  }
+  .login-form :deep(.q-field__label) {
+    color: #8d7781;
+  }
+  .login-form__submit,
+  .login-form__register {
+    min-height: 46px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: none;
+  }
+  .login-form__submit {
+    background:
+      linear-gradient(
+        158deg,
+        transparent 0 30%,
+        rgba(255, 255, 255, 0.1) 30.4% 36%,
+        transparent 36.4%
+      ),
+      linear-gradient(112deg, #ff4f79, #f43f6f 48%, #df2f61) !important;
+    box-shadow: 0 5px 14px rgba(222, 47, 97, 0.15);
+  }
+  .login-form__register {
+    color: #d72c60 !important;
+    background: #fff5f8 !important;
+  }
+  .login-form__register::before {
+    border-color: #f3cbd8;
+  }
+  .login-form__divider {
+    font-size: 10px;
+  }
+  .login-form__forgot {
+    color: #cc2b5a;
+    font-size: 11px;
+    font-weight: 600;
   }
 
   .login-form__options {
-    align-items: flex-start;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 11px;
   }
 }
 
