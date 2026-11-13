@@ -1,0 +1,23 @@
+2026-11-13 21:00:26.745: [INFO] CurrentProfilePath: C:\laragon\www\PaginaWeb\tmp\edge-skeleton-preview\Default
+2026-11-13 21:00:26.745: [INFO] Profiles total count: 1
+2026-11-13 21:00:26.745: [INFO] Profile: name=Perfil 1 path=C:\laragon\www\PaginaWeb\tmp\edge-skeleton-preview\Default lastActive=null
+2026-11-13 21:00:26.745: [INFO] LastUsedProfileDir: C:\laragon\www\PaginaWeb\tmp\edge-skeleton-preview\Default
+2026-11-13 21:00:26.746: [INFO] VisibilityChanged: 0
+2026-11-13 21:00:26.766: [INFO] OnDoneLoading sync enabled: 0
+2026-11-13 21:00:26.766: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-11-13 21:00:26.766: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-11-13 21:00:26.766: [INFO] BookmarksSnapshot Startup total=0 bar=0 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-11-13 21:00:26.816: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-11-13 21:03:10.231: [INFO] BookmarksSnapshot Shutdown total=0 bar=0 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-11-13 21:11:09.907: [INFO] CurrentProfilePath: C:\laragon\www\PaginaWeb\tmp\edge-skeleton-preview\Default
+2026-11-13 21:11:09.907: [INFO] Profiles total count: 1
+2026-11-13 21:11:09.907: [INFO] Profile: name=Perfil 1 path=C:\laragon\www\PaginaWeb\tmp\edge-skeleton-preview\Default lastActive=2026-11-13T21:00:26.756Z
+2026-11-13 21:11:09.907: [INFO] LastUsedProfileDir: C:\laragon\www\PaginaWeb\tmp\edge-skeleton-preview\Default
+2026-11-13 21:11:09.907: [INFO] MostRecentlyActiveProfile: name=Perfil 1 path=C:\laragon\www\PaginaWeb\tmp\edge-skeleton-preview\Default lastActive=2026-11-13T21:00:26.756Z
+2026-11-13 21:11:09.907: [INFO] VisibilityChanged: 0
+2026-11-13 21:11:09.934: [INFO] OnDoneLoading sync enabled: 0
+2026-11-13 21:11:09.934: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-11-13 21:11:09.934: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-11-13 21:11:09.934: [INFO] BookmarksSnapshot Startup total=0 bar=0 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-11-13 21:11:09.935: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-11-13 21:11:28.422: [INFO] BookmarksSnapshot Shutdown total=0 bar=0 other=0 mobile=0 showBar=0 showBarNTP=1

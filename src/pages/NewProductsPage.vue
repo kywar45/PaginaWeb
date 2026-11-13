@@ -4,12 +4,17 @@
       <PageBreadcrumbs title="Productos nuevos" />
       <h1 class="sr-only">Productos nuevos</h1>
 
-      <p v-if="products.length" class="products-page__results" aria-live="polite">
+      <p v-if="!loading && !errorMessage && products.length" class="products-page__results" aria-live="polite">
         Total: {{ products.length.toLocaleString('es-MX') }} productos
         <span v-if="pageCount > 1"> · Página {{ page }} de {{ pageCount }}</span>
       </p>
 
-      <div class="products-page__grid">
+      <LoadingSkeleton v-if="loading" :count="8" label="Cargando productos nuevos..." />
+      <div v-else-if="errorMessage" class="q-pa-lg text-center" role="alert">
+        <p>{{ errorMessage }}</p><q-btn color="primary" flat no-caps label="Reintentar" @click="loadProducts" />
+      </div>
+      <p v-else-if="!products.length" class="q-pa-lg text-center">No hay productos nuevos disponibles.</p>
+      <div v-else class="products-page__grid">
         <article
           v-for="product in pagedProducts"
           :key="product.id_producto"
@@ -23,12 +28,11 @@
           <div class="offer-image">
             <div class="card-badges">
               <NewBadge />
-              <SaleBadge
-                v-if="product.tiene_descuento"
-                :percentage="product.porcentaje_descuento"
+              <ProductBadge
+                :product="product"
               />
             </div>
-            <img
+            <img v-image-skeleton
               :src="product.imagen"
               :alt="product.nombre"
               loading="lazy"
@@ -38,7 +42,7 @@
           <ProductCardInfo :product="product" />
         </article>
       </div>
-      <div v-if="products.length" class="products-page__pagination">
+      <div v-if="!loading && !errorMessage && products.length" class="products-page__pagination">
         <StorePagination
           v-if="pageCount > 1"
           :model-value="page"
@@ -60,15 +64,16 @@ const openProduct = useProductNavigation()
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import ProductCardInfo from 'src/components/ProductCardInfo.vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import SaleBadge from 'src/components/SaleBadge.vue'
+import ProductBadge from 'src/components/ProductBadge.vue'
 import NewBadge from 'src/components/NewBadge.vue'
 
-import { mockNewestProducts } from 'src/data/mockStore'
 import { getProducts } from 'src/services/productApi'
 import { publicAsset } from 'src/utils/publicAsset'
 
-const request = new AbortController()
-const products = ref(mockNewestProducts)
+let request = null
+const products = ref([])
+const loading = ref(true)
+const errorMessage = ref('')
 const page = ref(1)
 const pageSize = 30
 const pageCount = computed(() => Math.ceil(products.value.length / pageSize))
@@ -77,22 +82,34 @@ const pagedProducts = computed(() =>
 )
 const fallbackProductImage = publicAsset('img/product-no-image.svg')
 
-onMounted(async () => {
+async function loadProducts() {
+  request?.abort()
+  const current = new AbortController()
+  request = current
+  loading.value = true
+  errorMessage.value = ''
+  const timeout = setTimeout(() => current.abort(), 15000)
   try {
     const response = await getProducts({
       coleccion: 'nuevos',
       limit: 100,
-      signal: request.signal,
+      signal: current.signal,
     })
-    products.value = response.productos
-    page.value = 1
-  } catch (error) {
-    if (error.name !== 'AbortError') console.warn('No se pudieron cargar los productos nuevos.')
+    if (request === current) {
+      products.value = response.productos
+      page.value = 1
+    }
+  } catch {
+    if (request === current) errorMessage.value = 'No se pudieron cargar los productos nuevos.'
+  } finally {
+    clearTimeout(timeout)
+    if (request === current) loading.value = false
   }
-})
+}
+onMounted(loadProducts)
 
 onBeforeUnmount(() => {
-  request.abort()
+  request?.abort()
 })
 
 

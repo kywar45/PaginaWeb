@@ -7,6 +7,7 @@
         <CatalogSidebar
           class="catalog-layout__sidebar"
           :categories="categories"
+          :loading="loading && !categories.length"
           :category-id="category?.id"
           :subcategory-id="subcategory?.id"
         />
@@ -22,10 +23,7 @@
             >
           </p>
 
-          <div v-if="loading" class="q-pa-xl text-center" role="status">
-            <q-spinner color="primary" size="36px" />
-            <p>Cargando productos...</p>
-          </div>
+          <LoadingSkeleton v-if="loading" :count="8" label="Cargando productos..." />
           <div v-else-if="errorMessage" class="q-pa-lg text-center" role="alert">
             <p>{{ errorMessage }}</p>
             <q-btn color="primary" no-caps label="Reintentar" @click="loadProducts" />
@@ -45,12 +43,11 @@
               @keydown.space.prevent="openProduct(product)"
             >
               <div class="offer-image">
-                <SaleBadge
-                  v-if="product.tiene_descuento"
+                <ProductBadge
                   class="card-sale-badge"
-                  :percentage="product.porcentaje_descuento"
+                  :product="product"
                 />
-                <img
+                <img v-image-skeleton
                   :src="product.imagen"
                   :alt="product.nombre"
                   loading="lazy"
@@ -96,7 +93,7 @@ import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import ProductCardInfo from 'src/components/ProductCardInfo.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import SaleBadge from 'src/components/SaleBadge.vue'
+import ProductBadge from 'src/components/ProductBadge.vue'
 
 import { getCategories } from 'src/services/categoryApi'
 import { getProducts } from 'src/services/productApi'

@@ -1,0 +1,31 @@
+0:00:12 Tab2 StartNav41 #typed
+0:00:12 Tab2 StartNav42 #renderer-script #link
+0:00:12 Tab2 FinishNav42
+0:00:12 Tab2 FinishNav41
+0:00:12 Tab2 StartNav43 #renderer-script #link
+0:00:12 Tab2 FinishNav43
+0:00:12 Tab2 PageLoad
+0:00:13 Tab2 StartNav44 #renderer-script #link
+0:00:13 Tab2 FinishNav44
+0:00:13 Tab2 StartNav45 #typed
+0:00:13 Tab2 StartNav46 #renderer-script #link
+0:00:13 Tab2 FinishNav46
+0:00:13 Tab2 FinishNav45
+0:00:13 Tab2 StartNav47 #renderer-script #link
+0:00:13 Tab2 FinishNav47
+0:00:13 Tab2 PageLoad
+0:00:13 Tab2 StartNav48 #renderer-script #link
+0:00:13 Tab2 FinishNav48
+0:00:13 Tab2 StartNav49 #renderer-script #link
+0:00:13 Tab2 FinishNav49
+0:00:13 Microsoft.Shutdown.TabStripModel.CloseTabs
+0:00:13 Microsoft.Shutdown.TabStripModel.InternalCloseTabsImpl
+0:00:13 Microsoft.Shutdown.TabStripModel.InternalCloseTabsImpl_TabClosable
+0:00:13 Microsoft.Shutdown.TabStripModel.InternalCloseTabsImpl_NotClosingAll
+0:00:13 Microsoft.Shutdown.TabStripModel.CloseWebContentses
+0:00:13 Microsoft.Shutdown.TabStripModel.CloseWebContentses_FastShutdown
+0:00:13 Microsoft.Shutdown.TabStripModel.RunUnloadListenerBeforeClosing_false
+0:00:13 Microsoft.Shutdown.TabStripModel.InternalCloseTabsImpl_ClosedAll
+0:00:13 Microsoft.Shutdown.TabStripModel.SendDetachWebContentsNotifications
+0:00:13 Browser1 Close Tab2 at 1
+0:00:18 Microsoft.Shutdown.ExitIgnoreUnloadHandlers

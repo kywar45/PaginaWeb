@@ -1,9 +1,13 @@
-import { readonly, ref } from 'vue'
+import { computed, readonly, ref } from 'vue'
 import authApi from 'src/services/authApi'
 
 const currentUser = ref(null)
 const sessionChecked = ref(false)
 const sessionLoading = ref(false)
+const isVip = computed(() => !!currentUser.value && Number(currentUser.value.user_vip) === 1)
+const customerType = computed(() =>
+  !currentUser.value ? 'invitado' : isVip.value ? 'vip' : 'normal',
+)
 let pendingLoad = null
 
 export function useAuthSession() {
@@ -54,6 +58,8 @@ export function useAuthSession() {
   }
 
   return {
+    isVip,
+    customerType,
     currentUser: readonly(currentUser),
     sessionChecked: readonly(sessionChecked),
     sessionLoading: readonly(sessionLoading),

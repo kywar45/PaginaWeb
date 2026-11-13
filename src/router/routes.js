@@ -8,6 +8,7 @@ const routes = [
       { path: 'mas-vendidos', component: () => import('pages/BestSellersPage.vue') },
       { path: 'buscar', component: () => import('pages/SearchPage.vue') },
       { path: 'carrito', component: () => import('pages/CartPage.vue') },
+      { path: 'checkout', component: () => import('pages/CheckoutPage.vue') },
       { path: 'nuevos', component: () => import('pages/NewProductsPage.vue') },
       { path: 'categorias', component: () => import('pages/CategoriesPage.vue') },
       { path: 'sucursales', component: () => import('pages/BranchesPage.vue') },

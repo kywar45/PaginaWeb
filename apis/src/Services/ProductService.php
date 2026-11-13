@@ -11,10 +11,12 @@ class ProductService
 
     private $products;
     private $imageBaseUrl;
+    private $isVip;
 
-    public function __construct(ProductRepository $products)
+    public function __construct(ProductRepository $products, $user = null)
     {
         $this->products = $products;
+        $this->isVip = is_array($user) && isset($user['user_vip']) && (int) $user['user_vip'] === 1;
         $this->imageBaseUrl = rtrim($this->env('PRODUCT_IMAGE_BASE_URL', self::DEFAULT_IMAGE_BASE_URL), '/') . '/';
     }
 
@@ -123,7 +125,7 @@ class ProductService
     {
         $total = $this->products->countSearch($query, $onlyAvailable, $offersOnly);
         $items = array();
-        foreach ($this->products->searchPage($query, $limit, ($page - 1) * $limit, $sort, $onlyAvailable, $offersOnly) as $row) {
+        foreach ($this->products->searchPage($query, $limit, ($page - 1) * $limit, $sort, $onlyAvailable, $offersOnly, $this->isVip) as $row) {
             $items[] = $this->normalizeProduct($row);
         }
         $hasMore = $page * $limit < $total;
@@ -165,6 +167,15 @@ class ProductService
         return array('subcategorias' => $groups);
     }
 
+    public function cartProduct($row)
+    {
+        $product = $this->normalizeProduct($row);
+        $product['minimo_mayoreo'] = (int) ($row['topem'] ?? 0);
+        $product['minimo_caja'] = (int) ($row['topec'] ?? 0);
+        $product['puede_comprar'] = (int) $row['active'] === 1 && $product['puede_comprar'];
+        return $product;
+    }
+
     private function normalizeProduct($row)
     {
         $price = $this->moneyValue($row['preciou']);
@@ -172,6 +183,14 @@ class ProductService
         $discountFlag = strtolower(trim((string) $row['descuento']));
         $hasDiscount = $discountFlag === 'si' && $discountPrice > 0;
         $finalPrice = $hasDiscount ? $discountPrice : $price;
+        if ($this->isVip) {
+            $cost = $this->moneyValue($row['precio_costo'] ?? null);
+            if (!isset($row['precio_costo']) || trim((string) $row['precio_costo']) === '' || $cost < 0) {
+                throw new ApiException('VIP_PRICE_UNAVAILABLE', 'No se pudo calcular el precio VIP de este producto.', 503);
+            }
+            $vipPrice = round($cost * 1.15, 2);
+            $finalPrice = $hasDiscount ? min($vipPrice, $discountPrice) : $vipPrice;
+        }
 
         return array(
             'id_producto' => (int) $row['id'],
@@ -183,6 +202,8 @@ class ProductService
             'imagen_nombre' => $row['imagen'],
             'precio_normal' => $price,
             'precio_final' => $finalPrice,
+            'es_vip' => $this->isVip,
+            'puede_comprar' => (int) $row['estatus'] === 1 || $this->isVip,
             'precio_mayoreo' => $this->moneyValue($row['preciom']),
             'precio_caja' => $this->moneyValue($row['precioc']),
             'descuento' => $discountFlag,
@@ -190,7 +211,7 @@ class ProductService
             'porcentaje_descuento' => $hasDiscount && $price > 0 && $finalPrice < $price
                 ? (int) round((($price - $finalPrice) / $price) * 100)
                 : 0,
-            'ahorro' => $hasDiscount && $finalPrice < $price ? round($price - $finalPrice, 2) : 0,
+            'ahorro' => ($hasDiscount || $this->isVip) && $finalPrice < $price ? round($price - $finalPrice, 2) : 0,
             'visitas' => (int) $row['visitas'],
             'estatus' => (int) $row['estatus'],
             'disponible' => (int) $row['estatus'] === 1,

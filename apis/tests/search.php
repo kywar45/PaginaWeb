@@ -16,7 +16,7 @@ namespace {
         public function __construct() {}
         public $countArguments;
         public function countSearch($query, $onlyAvailable = false, $offersOnly = false) { $this->countArguments = array($query, $onlyAvailable, $offersOnly); return 31; }
-        public function searchPage($query, $limit, $offset, $sort = 'relevancia', $onlyAvailable = false, $offersOnly = false) {
+        public function searchPage($query, $limit, $offset, $sort = 'relevancia', $onlyAvailable = false, $offersOnly = false, $isVip = false) {
             $this->arguments = array($query, $limit, $offset, $sort, $onlyAvailable, $offersOnly);
             return array(array('id' => 1, 'nombre' => 'Gel rosa', 'codigo' => 'LA-317',
                 'descripcion' => '', 'preciou' => 100, 'descuento_general' => 0, 'descuento' => 'no',
@@ -61,5 +61,7 @@ namespace {
         check(strpos($sql, 'END ' . $direction) !== false, 'Correct sort direction');
         check(substr($sql, -8) === 'p.id ASC', 'Stable pagination tie breaker');
     }
+    $sql = $order->invoke($repo, 'precio_asc', true);
+    check(strpos($sql, 'precio_costo') !== false && strpos($sql, 'LEAST(') !== false && strpos($sql, 'ROUND(') !== false, 'VIP sorting uses rounded cost and lower offer');
     echo "Search contract tests passed.\n";
 }

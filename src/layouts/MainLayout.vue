@@ -129,7 +129,7 @@
               style="min-width: fit-content; cursor: pointer"
               @click="$router.push('/')"
             >
-              <img :src="publicAsset('img/logob.png')" alt="Importadora Supernova" width="180px" />
+              <img v-image-skeleton :src="publicAsset('img/logob.png')" alt="Importadora Supernova" width="180px" />
             </div>
 
             <!-- Separador flexible (desktop) -->
@@ -258,7 +258,9 @@
               class="sn-catalog-popup"
               max-height="calc(100dvh - 195px)"
             >
+              <LoadingSkeleton v-if="categoriesLoading" variant="categories" class="q-pa-md" label="Cargando categorías..." />
               <StoreCategoryMenu
+                v-else
                 :categories="categories"
                 @select-category="(category) => selectCategoryFromMenu(category.slug)"
                 @select-subcategory="
@@ -350,6 +352,7 @@
           Categorías
         </q-item-label>
 
+        <LoadingSkeleton v-if="categoriesLoading" variant="list" :count="4" class="q-pa-sm" label="Cargando categorías..." />
         <template v-for="cat in categories" :key="cat.slug">
           <!-- Sin subcategorías: item simple -->
           <q-item
@@ -361,7 +364,7 @@
             @click="selectCategory(cat.slug)"
           >
             <q-item-section avatar>
-              <img v-if="cat.svgIcon" :src="cat.svgIcon" style="width: 24px; height: 24px" />
+              <img v-image-skeleton v-if="cat.svgIcon" :src="cat.svgIcon" style="width: 24px; height: 24px" />
               <q-icon v-else name="category" color="grey-6" />
             </q-item-section>
             <q-item-section>
@@ -383,7 +386,7 @@
           >
             <template #header>
               <q-item-section avatar>
-                <img v-if="cat.svgIcon" :src="cat.svgIcon" style="width: 100%; height: 24px" />
+                <img v-image-skeleton v-if="cat.svgIcon" :src="cat.svgIcon" style="width: 100%; height: 24px" />
                 <q-icon v-else name="category" color="grey-6" />
               </q-item-section>
               <q-item-section>
@@ -459,6 +462,20 @@
 
     <!-- ══════════════════════════════════ CONTENIDO ══════════════════════════════════ -->
     <q-page-container class=sn-page-container>
+      <aside v-if="cartNotice" class="cart-merge-notice" :role="cartNotice.retry ? 'alert' : 'status'">
+        <span class="cart-merge-notice__icon" aria-hidden="true">
+          <q-icon :name="cartNotice.retry ? 'sync_problem' : 'check_circle'" />
+        </span>
+        <div class="cart-merge-notice__copy">
+          <strong>{{ cartNotice.retry ? 'Tu carrito sigue guardado' : 'Carrito actualizado' }}</strong>
+          <p>{{ cartNotice.message }}</p>
+        </div>
+        <div class="cart-merge-notice__actions">
+          <q-btn v-if="cartNotice.retry" flat no-caps label="Reintentar" :loading="cartBusy" @click="retryCartMerge" />
+          <q-btn unelevated no-caps label="Ver carrito" icon-right="arrow_forward" to="/carrito" class="cart-merge-notice__link" />
+        </div>
+        <q-btn flat round dense icon="close" class="cart-merge-notice__close" aria-label="Cerrar aviso del carrito" @click="clearCartNotice" />
+      </aside>
       <router-view />
     </q-page-container>
 
@@ -468,7 +485,7 @@
       <div class="sn-footer-desktop gt-sm">
         <div class="sn-footer-grid">
           <div class="sn-footer-identity">
-            <img :src="publicAsset('img/logob.png')" alt="Importadora Supernova" class="sn-footer-logo" />
+            <img v-image-skeleton :src="publicAsset('img/logob.png')" alt="Importadora Supernova" class="sn-footer-logo" />
             <p class="sn-footer-motto">Estamos,<br />aquí para tí ♡</p>
           </div>
           <div>
@@ -527,7 +544,7 @@
                 class="sn-footer-social"
                 :aria-label="social.name"
               >
-                <img :src="social.image" :alt="social.name" /><q-tooltip>{{
+                <img v-image-skeleton :src="social.image" :alt="social.name" /><q-tooltip>{{
                   social.name
                 }}</q-tooltip>
               </a>
@@ -578,14 +595,12 @@ const openProduct = useProductNavigation()
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { catalogLocation } from 'src/utils/catalogRoutes'
-import { mockCategories } from 'src/data/mockStore'
-import { menuFallbackCategories } from 'src/data/categoryMenu'
 import StoreCategoryMenu from 'src/components/StoreCategoryMenu.vue'
 import { getCategories } from 'src/services/categoryApi'
 import { useAuthSession } from 'src/services/authSession'
 
 const router = useRouter()
-const { currentUser, loadCurrentUser } = useAuthSession()
+const { currentUser, sessionChecked, loadCurrentUser } = useAuthSession()
 
 const leftDrawerOpen = ref(false)
 const searchQuery = ref('')
@@ -593,12 +608,29 @@ const searchOpen = ref(false)
 const activeCategory = ref('all')
 const activeSubcategory = ref('')
 const mobileTab = ref('home')
-const { cartCount } = useCart()
+const {
+  cartCount, resetCart, loadCart, notice: cartNotice, busy: cartBusy,
+  mergeCart, clearNotice: clearCartNotice,
+} = useCart()
+async function retryCartMerge() {
+  try { await mergeCart() }
+  catch { /* El aviso conserva el error y permite reintentar. */ }
+}
+watch(
+  [() => sessionChecked.value, () => currentUser.value?.id, () => currentUser.value?.user_vip],
+  ([checked]) => {
+    if (!checked) return
+    resetCart()
+    loadCart().catch(() => { /* El carrito muestra el error y permite reintentar. */ })
+  },
+  { immediate: true, flush: 'sync' },
+)
 const categoriesMenu = ref(false)
 const categoryRequest = new AbortController()
 
 // Entrada fija "Todos" que siempre encabeza la lista
-const categories = ref(menuFallbackCategories)
+const categories = ref([])
+const categoriesLoading = ref(true)
 
 const accountName = computed(() => {
   const user = currentUser.value
@@ -628,12 +660,13 @@ onMounted(async () => {
 
   try {
     const apiCategories = await getCategories({ signal: categoryRequest.signal })
-    const allCategory = mockCategories.find((cat) => cat.slug === 'all')
-    categories.value = allCategory ? [allCategory, ...apiCategories] : apiCategories
+    const allCategory = { id: 'all', slug: 'all', name: 'Todos', label: 'Todos', svgIcon: publicAsset('iconos/home.webp'), subcategories: [] }
+    categories.value = [allCategory, ...apiCategories]
   } catch (error) {
     if (error.name !== 'AbortError') console.warn('No se pudieron cargar las categorias.')
   } finally {
     clearTimeout(timeout)
+    categoriesLoading.value = false
   }
 })
 
@@ -788,6 +821,74 @@ async function showOffers() {
 }
 </script>
 <style lang="scss">
+.cart-merge-notice {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto 28px;
+  align-items: center;
+  gap: 14px;
+  width: calc(100% - 48px);
+  max-width: 1184px;
+  margin: 12px auto;
+  padding: 14px 16px;
+  border: 1px solid #f6dce6;
+  border-radius: 16px;
+  background: linear-gradient(110deg, #fff7fa, #fff 70%);
+  box-shadow: 0 4px 16px rgba(133, 37, 72, 0.04);
+}
+.cart-merge-notice__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 13px;
+  background: #ffe5ee;
+  color: #ee346c;
+  font-size: 23px;
+}
+.cart-merge-notice__copy {
+  min-width: 0;
+  strong { color: #50313f; font-size: 14px; font-weight: 700; }
+  p { margin: 3px 0 0; color: #8c6c7b; font-size: 12px; line-height: 1.5; }
+}
+.cart-merge-notice__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #d72c60;
+}
+.cart-merge-notice__link {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 11px;
+  background: linear-gradient(110deg, #ff4f79, #e72e65);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  .q-icon { font-size: 17px; }
+}
+.cart-merge-notice__close {
+  color: #ad8a9a;
+  font-size: 10px;
+}
+@media (max-width: 599px) {
+  .cart-merge-notice {
+    grid-template-columns: 32px minmax(0, 1fr) 24px;
+    align-items: start;
+    gap: 7px 10px;
+    width: calc(100% - 24px);
+    margin: 10px 12px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+  .cart-merge-notice__icon { width: 32px; height: 32px; border-radius: 10px; font-size: 20px; }
+  .cart-merge-notice__copy {
+    strong { font-size: 13px; }
+    p { margin-top: 2px; font-size: 11px; }
+  }
+  .cart-merge-notice__actions { grid-column: 2 / -1; flex-wrap: wrap; }
+  .cart-merge-notice__link { min-height: 30px; padding: 0 11px; border-radius: 9px; font-size: 11px; }
+  .cart-merge-notice__close { grid-column: 3; grid-row: 1; margin-top: -3px; }
+}
 .sn-topbar-account {
   max-width: 240px;
 

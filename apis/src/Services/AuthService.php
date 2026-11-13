@@ -70,7 +70,29 @@ class AuthService
         return array(
             'usuario' => $this->publicUser($usuario),
             'expires_at' => $expiresAt->format('c'),
+            'carrito_fusion' => $this->mergeGuestCart($this->publicUser($usuario)),
         );
+    }
+
+    private function mergeGuestCart($user)
+    {
+        try {
+            $identity = new CartIdentity();
+            $guest = $identity->existingGuest();
+            if ($guest === null) return array('fusionado' => false);
+            $cart = new CartService(
+                new \App\Repositories\CartRepository($this->pdo),
+                new \App\Repositories\ProductRepository($this->pdo),
+                $identity->resolve($user), $user, $guest
+            );
+            return $cart->execute('fusionar')['fusion'];
+        } catch (\Throwable $error) {
+            // La sesion ya es valida; un fallo de carrito no invalida el login ni borra las piezas.
+            $this->logInfo('auth.cart_merge_failed', array('usuario_id' => $user['id']));
+            return array('fusionado' => false, 'pendiente' => true,
+                'mensaje' => $error instanceof ApiException ? $error->getMessage()
+                    : 'Iniciaste sesion, pero no pudimos combinar los carritos. Tus productos de visitante siguen guardados.');
+        }
     }
 
     public function currentUser()
@@ -78,6 +100,16 @@ class AuthService
         return array(
             'usuario' => $this->publicUser($this->sessionUserOrFail()),
         );
+    }
+
+    public function optionalUser()
+    {
+        try {
+            return $this->publicUser($this->sessionUserOrFail());
+        } catch (ApiException $error) {
+            if ($error->getStatus() === 401) return null;
+            throw $error;
+        }
     }
 
     public function logout()

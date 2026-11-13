@@ -9,10 +9,7 @@
         <span v-if="pagination.total_pages > 1"> · Página {{ page }} de {{ pagination.total_pages }}</span>
       </p>
 
-      <div v-if="loading" class="q-pa-xl text-center" role="status">
-        <q-spinner color="primary" size="36px" />
-        <p>Cargando ofertas...</p>
-      </div>
+      <LoadingSkeleton v-if="loading" :count="12" :columns="6" label="Cargando ofertas..." />
       <div v-else-if="errorMessage" class="q-pa-lg text-center" role="alert">
         <p>{{ errorMessage }}</p>
         <q-btn color="primary" no-caps label="Reintentar" @click="loadProducts" />
@@ -30,8 +27,8 @@
           @keydown.space.prevent="openProduct(product)"
         >
           <div class="offer-image">
-            <SaleBadge class="card-sale-badge" :percentage="product.porcentaje_descuento" />
-            <img
+            <ProductBadge class="card-sale-badge" :product="product" />
+            <img v-image-skeleton
               :src="product.imagen"
               :alt="product.nombre"
               loading="lazy"
@@ -74,7 +71,7 @@ import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import ProductCardInfo from 'src/components/ProductCardInfo.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import SaleBadge from 'src/components/SaleBadge.vue'
+import ProductBadge from 'src/components/ProductBadge.vue'
 
 import { getProducts } from 'src/services/productApi'
 import { publicAsset } from 'src/utils/publicAsset'

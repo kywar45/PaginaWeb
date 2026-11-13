@@ -20,7 +20,7 @@
       <button v-if="sort !== 'relevancia' || onlyAvailable || offersOnly" type="button" class="search-filters__reset" @click="updateFilters({ orden: undefined, solo_disponibles: undefined, solo_ofertas: undefined })"><q-icon name="restart_alt" aria-hidden="true" /> Limpiar</button>
     </div>
     <div v-if="!query" class="search-page__status">Escribe un nombre o código en el buscador para encontrar productos.</div>
-    <div v-else-if="loading" class="search-page__status" role="status"><q-spinner color="primary" size="32px" /><p>Buscando productos...</p></div>
+    <LoadingSkeleton v-else-if="loading" :count="8" label="Buscando productos..." />
     <div v-else-if="error" class="search-page__status" role="alert"><p>{{ error }}</p><q-btn no-caps color="primary" label="Reintentar" @click="loadResults" /></div>
     <template v-else>
       <p class="search-page__count" role="status">{{ pagination.total || 0 }} productos encontrados</p>
@@ -28,8 +28,8 @@
       <div v-else class="search-page__grid">
         <RouterLink v-for="product in products" :key="product.id_producto" :to="productLocation(product)" class="search-product">
           <div class="search-product__image">
-            <SaleBadge v-if="product.tiene_descuento" :percentage="product.porcentaje_descuento" />
-            <img :src="product.imagen" :alt="product.nombre" loading="lazy" @error="useFallbackImage" />
+            <ProductBadge :product="product" />
+            <img v-image-skeleton :src="product.imagen" :alt="product.nombre" loading="lazy" @error="useFallbackImage" />
           </div>
           <ProductCardInfo :product="product" />
         </RouterLink>
@@ -44,7 +44,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import ProductCardInfo from 'src/components/ProductCardInfo.vue'
-import SaleBadge from 'src/components/SaleBadge.vue'
+import ProductBadge from 'src/components/ProductBadge.vue'
 import StorePagination from 'src/components/StorePagination.vue'
 import { getProducts } from 'src/services/productApi'
 import { productLocation } from 'src/utils/productRoutes'

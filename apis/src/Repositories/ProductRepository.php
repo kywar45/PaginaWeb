@@ -11,6 +11,17 @@ class ProductRepository
         $this->pdo = $pdo;
     }
 
+    public function cartProducts($ids)
+    {
+        if (!$ids) return array();
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->pdo->prepare('SELECT p.*,
+            (SELECT i.a FROM img i WHERE i.id_producto = p.id ORDER BY i.posicion ASC, i.a ASC LIMIT 1) AS imagen
+            FROM productos p WHERE p.id IN (' . $placeholders . ')');
+        $stmt->execute(array_values($ids));
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     public function listPage($collection, $limit, $offset, $subcategoryId = null, $onlyAvailable = false, $categoryId = null)
     {
         $where = array('p.active = 1');
@@ -48,7 +59,7 @@ class ProductRepository
         // Keep available products before sold-out items across all pages.
         $order = 'p.estatus DESC, ' . $order;
 
-        $sql = 'SELECT p.id, p.nombre, p.codigo, p.preciou, p.preciom, p.precioc,
+        $sql = 'SELECT p.id, p.nombre, p.codigo, p.preciou, p.preciom, p.precioc, p.precio_costo,
                        p.topem, p.topec, p.descripcion, p.visitas, p.estatus,
                        p.minimo, p.fecha_restock, p.sub_categoria,
                        p.descuento, p.descuento_general, p.descuento_especial, p.promo,
@@ -172,11 +183,15 @@ class ProductRepository
         return "CAST(REPLACE(REPLACE(COALESCE($column, 0), ',', ''), '$', '') AS DECIMAL(12,2))";
     }
 
-    private function searchOrder($sort)
+    private function searchOrder($sort, $isVip = false)
     {
         if ($sort === 'precio_asc' || $sort === 'precio_desc') {
             $discount = $this->searchMoney('p.descuento_general');
             $price = $this->searchMoney('p.preciou');
+            if ($isVip) {
+                $price = 'ROUND(' . $this->searchMoney('p.precio_costo') . ' * 1.15, 2)';
+                $discount = "LEAST($discount, $price)";
+            }
             return "CASE WHEN LOWER(TRIM(COALESCE(p.descuento, ''))) = 'si' AND $discount > 0 THEN $discount ELSE $price END "
                 . ($sort === 'precio_asc' ? 'ASC' : 'DESC') . ', p.estatus DESC, p.id ASC';
         }
@@ -184,10 +199,10 @@ class ProductRepository
         return 'p.estatus DESC, CASE WHEN p.codigo = :exact_code THEN 0 ELSE 1 END, p.nombre ASC, p.id ASC';
     }
 
-    public function searchPage($query, $limit, $offset, $sort = 'relevancia', $onlyAvailable = false, $offersOnly = false)
+    public function searchPage($query, $limit, $offset, $sort = 'relevancia', $onlyAvailable = false, $offersOnly = false, $isVip = false)
     {
         list($where, $params) = $this->searchFilter($query, $onlyAvailable, $offersOnly);
-        $order = $this->searchOrder($sort);
+        $order = $this->searchOrder($sort, $isVip);
         $stmt = $this->pdo->prepare('SELECT p.*,
             (SELECT i.a FROM img i WHERE i.id_producto = p.id ORDER BY i.posicion ASC, i.a ASC LIMIT 1) AS imagen
             FROM productos p WHERE ' . $where . '
@@ -306,7 +321,7 @@ class ProductRepository
         $subcategoryStmt->execute();
         $subcategories = $subcategoryStmt->fetchAll();
 
-        $productSql = 'SELECT p.id, p.nombre, p.codigo, p.preciou, p.preciom, p.precioc,
+        $productSql = 'SELECT p.id, p.nombre, p.codigo, p.preciou, p.preciom, p.precioc, p.precio_costo,
                               p.topem, p.topec, p.descripcion, p.visitas, p.estatus,
                               p.minimo, p.fecha_restock, p.sub_categoria,
                               p.descuento, p.descuento_general, p.descuento_especial, p.promo,

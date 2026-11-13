@@ -3,7 +3,7 @@
     <section class="login-shell">
       <aside class="login-brand gt-xs">
         <div class="login-brand__content">
-          <img
+          <img v-image-skeleton
             :src="publicAsset('img/logob.png')"
             alt="Importadora Supernova"
             class="login-brand__logo"
@@ -135,9 +135,11 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import authApi from 'src/services/authApi'
 import { useAuthSession } from 'src/services/authSession'
+import { useCart } from 'src/services/cart'
 
 const router = useRouter()
 const { loadCurrentUser, setCurrentUser } = useAuthSession()
+const { setMergeNotice } = useCart()
 
 const email = ref('')
 const password = ref('')
@@ -178,6 +180,7 @@ async function submitLogin() {
     })
 
     setCurrentUser(data?.usuario)
+    setMergeNotice(data?.carrito_fusion)
     router.push('/')
   } catch (error) {
     errorMessage.value = error?.message || 'No pudimos iniciar sesion. Intenta de nuevo.'

@@ -556,6 +556,32 @@ body {
   }
 }
 
+// Imagenes: mantener el espacio del elemento nativo hasta que termine de decodificar.
+.sn-image-skeleton {
+  position: absolute;
+  display: block;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+  background: #f4eff1;
+}
+.sn-image-skeleton::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(100deg, transparent 15%, rgba(255, 255, 255, 0.8) 50%, transparent 85%);
+  transform: translateX(-100%);
+  animation: sn-image-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes sn-image-shimmer {
+  to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sn-image-skeleton::after { animation: none; }
+  .q-skeleton::before, .q-skeleton::after { animation: none !important; }
+}
+.home-load-error { padding: 18px 12px; text-align: center; color: #8c6c7b; }
+
 // --- Product Card ----------------------------------------------
 .sn-product-card {
   border-radius: 16px;

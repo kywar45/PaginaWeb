@@ -1,7 +1,10 @@
 <template>
   <aside class="catalog-sidebar" aria-label="Filtrar productos por categoría">
     <h2>Categorías</h2>
-    <nav aria-label="Categorías y subcategorías">
+    <div v-if="loading" role="status" aria-label="Cargando categorías...">
+      <q-skeleton v-for="item in 8" :key="item" type="text" height="36px" class="q-mx-sm" />
+    </div>
+    <nav v-else aria-label="Categorías y subcategorías">
       <div v-for="category in categories" :key="category.id" class="catalog-sidebar__group">
         <div class="catalog-sidebar__category" :class="{ 'is-active': category.id === categoryId }">
           <RouterLink
@@ -56,6 +59,7 @@
 import { ref, watch } from 'vue'
 import { catalogLocation } from 'src/utils/catalogRoutes'
 const props = defineProps({
+  loading: Boolean,
   categories: { type: Array, required: true },
   categoryId: { type: Number, default: null },
   subcategoryId: { type: Number, default: null },

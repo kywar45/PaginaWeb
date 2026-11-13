@@ -1,7 +1,11 @@
 # Convenciones de interfaz
 
+- Carga: usar `LoadingSkeleton.vue` (registrado globalmente) para datos pendientes y `v-image-skeleton` en imagenes para conservar su espacio hasta decodificarlas. No inicializar colecciones con productos de ejemplo. Diferenciar carga, error con reintento y lista vacia. Conservar la imagen de no disponible solo como fallback real de una foto ausente o fallida. Los indicadores de operaciones como agregar/guardar pueden mantener su spinner.
+
 - Todas las páginas interiores deben usar `src/components/PageBreadcrumbs.vue` para la navegación superior. No crear otras variantes de breadcrumbs o botones «Volver» en sus cabeceras.
 - Usar una fila compacta sin recuadro ni subtítulo: flecha rosa sin círculo, enlace Inicio, padres opcionales y página actual. Pasar `title`, `backTo` y `parents` cuando corresponda.
 - La portada no necesita breadcrumbs. Los títulos de formularios, contenido y diálogos pueden conservarse; no son cabeceras de navegación.
 - Conservar la vista de escritorio al hacer cambios solicitados exclusivamente para móvil.
 - Productos: ignorar `oculto`. `active = 1` determina si se publica; `estatus = 1` significa disponible y `estatus = 0` agotado. El inicio solicita únicamente activos disponibles (`solo_disponibles=1`); las páginas interiores muestran todos los activos y usan `ProductAvailability.vue` para identificar agotados.
+- VIP: la sesión del servidor (`usuario.user_vip = 1`) define los beneficios. Precio VIP = `precio_costo * 1.15`, redondeado a centavos; si hay oferta usar el menor de ambos. No exponer `precio_costo` al navegador. VIP puede agregar activos agotados; normales e invitados no. Usar `ProductBadge.vue` para distinguir VIP de oferta. El inicio sigue excluyendo agotados también para VIP.
+- Carrito: la API es la fuente de cantidades y precios. Registrados se identifican por la sesion; invitados por cookie aleatoria HttpOnly y `carrito.guest_hash`. No confiar en identidades/precios del navegador. Sumar piezas comprables del mismo codigo para aplicar `topem`/`preciom` o `topec`/`precioc` a cada variante, conservando ofertas y reglas VIP. Recalcular todo el carrito al agregar, editar y quitar. Al iniciar sesion fusionar visitante y cuenta en una sola transaccion: sumar por id_producto, recalcular y vaciar visitante solo al confirmar; reintentar no debe duplicar piezas.

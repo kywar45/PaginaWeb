@@ -6,7 +6,7 @@
         :back-to="$q.screen.lt.md && section ? '/panel' : '/'"
         :parents="$q.screen.lt.md && section ? [{ label: 'Mi cuenta', to: '/panel' }] : []"
       />
-      <div v-if="!section || !$q.screen.lt.md" class="account-page__header">
+      <div v-if="sessionChecked && !sessionLoading && (!section || !$q.screen.lt.md)" class="account-page__header">
         <q-avatar size="64px" class="account-page__avatar">
           <span v-if="initials">{{ initials }}</span>
           <q-icon v-else name="person" size="34px" />
@@ -21,12 +21,7 @@
         </div>
       </div>
 
-      <q-banner v-if="sessionLoading" rounded class="account-page__notice">
-        <template #avatar>
-          <q-spinner color="primary" size="22px" />
-        </template>
-        Cargando tu sesion...
-      </q-banner>
+      <LoadingSkeleton v-if="sessionLoading || !sessionChecked" variant="account" :count="2" label="Cargando tu cuenta..." />
 
       <template v-else-if="currentUser">
         <nav v-if="!section" class="account-menu lt-md" aria-label="Opciones de mi cuenta">
@@ -80,7 +75,8 @@
               <q-item>
                 <q-item-section>
                   <q-item-label caption>Tipo</q-item-label>
-                  <q-item-label>{{ currentUser.tipo || 'Cliente' }}</q-item-label>
+                  <q-item-label>{{ accountTypeLabel }}</q-item-label>
+                  <VipBadge v-if="isVip" class="q-mt-sm" />
                 </q-item-section>
               </q-item>
             </q-list>
@@ -109,7 +105,8 @@
               <q-item>
                 <q-item-section>
                   <q-item-label caption>Tipo de cuenta</q-item-label>
-                  <q-item-label>{{ currentUser.tipo || 'Cliente' }}</q-item-label>
+                  <q-item-label>{{ accountTypeLabel }}</q-item-label>
+                  <VipBadge v-if="isVip" class="q-mt-sm" />
                 </q-item-section>
               </q-item>
             </q-list>
@@ -152,6 +149,7 @@
 
 <script setup>
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
+import VipBadge from 'src/components/VipBadge.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthSession } from 'src/services/authSession'
@@ -172,7 +170,8 @@ const section = computed(() =>
   accountSections.some((item) => item.id === route.query.seccion) ? route.query.seccion : '',
 )
 const selectedSection = computed(() => accountSections.find((item) => item.id === section.value))
-const { currentUser, sessionLoading, loadCurrentUser, logout } = useAuthSession()
+const { currentUser, isVip, sessionChecked, sessionLoading, loadCurrentUser, logout } = useAuthSession()
+const accountTypeLabel = computed(() => (isVip.value ? 'Cliente VIP' : 'Cliente normal'))
 const logoutLoading = ref(false)
 const logoutError = ref('')
 const initials = computed(() =>

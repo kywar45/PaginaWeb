@@ -5,7 +5,12 @@ const FALLBACK_IMAGE = publicAsset('img/product-no-image.svg')
 
 function normalizeProduct(row) {
   const price = Number(row.precio_normal) || 0
-  const finalPrice = Number(row.precio_final) || price
+  const finalPrice =
+    row.precio_final !== null &&
+    row.precio_final !== undefined &&
+    Number.isFinite(Number(row.precio_final))
+      ? Number(row.precio_final)
+      : price
 
   return {
     ...row,
@@ -22,6 +27,8 @@ function normalizeProduct(row) {
     porcentaje_descuento: Number(row.porcentaje_descuento) || 0,
     ahorro: Number(row.ahorro) || 0,
     visitas: Number(row.visitas) || 0,
+    es_vip: row.es_vip === true,
+    puede_comprar: row.puede_comprar === true || Number(row.estatus) === 1,
     estatus: row.estatus === undefined || row.estatus === null ? null : Number(row.estatus),
   }
 }
@@ -58,6 +65,8 @@ export async function getProducts({
   if (solo_ofertas) params.set('solo_ofertas', '1')
 
   const response = await fetch(`${base}/productos?${params}`, {
+    credentials: 'include',
+    cache: 'no-store',
     headers: { Accept: 'application/json' },
     signal,
   })
@@ -69,14 +78,21 @@ export async function getProducts({
   if (q !== undefined && payload.data.search_query !== q) {
     throw new Error('El buscador todavía no está habilitado en el servidor.')
   }
-  if (id_marca !== undefined && id_marca !== null && Number(payload.data.marca_id) !== Number(id_marca)) {
+  if (
+    id_marca !== undefined &&
+    id_marca !== null &&
+    Number(payload.data.marca_id) !== Number(id_marca)
+  ) {
     throw new Error('Actualiza la API para habilitar los productos por marca.')
   }
-  if (q !== undefined && orden !== undefined && (
-    payload.data.search_filters?.orden !== orden ||
-    payload.data.search_filters?.solo_disponibles !== Boolean(solo_disponibles) ||
-    payload.data.search_filters?.solo_ofertas !== Boolean(solo_ofertas)
-  )) throw new Error('Actualiza la API del buscador para habilitar los filtros.')
+  if (
+    q !== undefined &&
+    orden !== undefined &&
+    (payload.data.search_filters?.orden !== orden ||
+      payload.data.search_filters?.solo_disponibles !== Boolean(solo_disponibles) ||
+      payload.data.search_filters?.solo_ofertas !== Boolean(solo_ofertas))
+  )
+    throw new Error('Actualiza la API del buscador para habilitar los filtros.')
 
   return {
     productos: payload.data.productos.map(normalizeProduct),
@@ -89,6 +105,8 @@ export async function getProduct(id, { signal } = {}) {
   const response = await fetch(
     `${base}/productos?${new URLSearchParams({ id_producto: String(id) })}`,
     {
+      credentials: 'include',
+      cache: 'no-store',
       headers: { Accept: 'application/json' },
       signal,
     },
@@ -123,6 +141,8 @@ export async function getRandomSubcategoryProducts({
   })
 
   const response = await fetch(`${base}/productos/subcategorias-aleatorias?${params}`, {
+    credentials: 'include',
+    cache: 'no-store',
     headers: { Accept: 'application/json' },
     signal,
   })

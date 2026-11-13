@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <section
     v-if="slides.length"
     class="banner-carousel"
@@ -33,7 +33,7 @@
           :tabindex="slot === position && slide.href ? 0 : -1"
           class="banner-carousel__slide"
         >
-          <img
+          <img v-image-skeleton
             :src="slide.image"
             :alt="`${label} ${slide.id}`"
             :loading="strip ? 'lazy' : 'eager'"

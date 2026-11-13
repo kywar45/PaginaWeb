@@ -71,13 +71,13 @@
       :aria-label="`Descubre ${categoryLabel(activeCategory)}`"
     >
       <div class="catalog-menu__campaign" :class="{ 'catalog-menu__campaign--mussa': isLeMussa }">
-        <img
+        <img v-image-skeleton
           v-if="isLeMussa"
           class="catalog-menu__campaign-photo"
           :src="publicAsset('img/menu/manicure-promo.png')"
           alt="Manicura profesional en tonos rosa nude"
         />
-        <img
+        <img v-image-skeleton
           v-else
           class="catalog-menu__campaign-category"
           :src="activeCategory.svgIcon || activeCategory.iconUrl"

@@ -120,4 +120,12 @@ check($catalog['productos'][2]['disponible'] === false, 'Sold out marked unavail
 $home = $service->listProducts('recientes', 1, 30, 44, true);
 check(array_column($home['productos'], 'id') === array(1, 2), 'Home only available and ignores oculto');
 check($home['pagination']['total'] === 2, 'Home count only available');
+foreach ($repo->rows as $index => $item) $repo->rows[$index]['precio_costo'] = 50;
+$vipService = new \App\Services\ProductService($repo, array('user_vip' => 1));
+$vipCatalog = $vipService->listProducts('recientes', 1, 30, 44);
+check(count($vipCatalog['productos']) === 3, 'VIP catalog still filters inactive products');
+check($vipCatalog['productos'][2]['puede_comprar'] === true, 'Sold-out catalog product orderable for VIP');
+check($vipCatalog['productos'][0]['precio_final'] === 57.5, 'VIP price applied to catalog');
+$vipHome = $vipService->listProducts('recientes', 1, 30, 44, true);
+check(count($vipHome['productos']) === 2, 'Home excludes sold-out products even for VIP');
 echo "Product pagination and availability tests passed.\n";

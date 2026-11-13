@@ -1,9 +1,14 @@
 <template>
-  <section v-if="videos.length" class="tiktok-section" aria-labelledby="tiktok-title">
+  <section v-if="videosLoading || videos.length" class="tiktok-section" aria-labelledby="tiktok-title">
     <div class="tiktok-heading">
       <h2 id="tiktok-title">INSPÍRATE</h2>
     </div>
-    <div class="tiktok-carousel-shell">
+    <div v-if="videosLoading" class="tiktok-rail" role="status" aria-label="Cargando videos..." aria-busy="true">
+      <div v-for="item in 3" :key="item" class="tiktok-card" aria-hidden="true">
+        <q-skeleton class="tiktok-card__player" /><q-skeleton height="44px" />
+      </div>
+    </div>
+    <div v-else class="tiktok-carousel-shell">
       <q-btn
         unelevated
         round
@@ -29,11 +34,9 @@
               loading="lazy"
               allow="fullscreen; encrypted-media; picture-in-picture"
               allowfullscreen
+              @load="readyPlayers[video.id] = true"
             />
-            <div v-else class="tiktok-card__loading" role="status">
-              <q-spinner color="primary" size="26px" />
-              <span>Cargando video...</span>
-            </div>
+            <q-skeleton v-if="!readyPlayers[video.id]" class="tiktok-card__skeleton" aria-label="Cargando video..." />
           </div>
           <div class="tiktok-card__title">
             {{ video.titulo || 'Video de TikTok' }}
@@ -60,6 +63,8 @@ const base = (
 ).replace(/\/+$/, '')
 const request = new AbortController()
 const videos = ref([])
+const videosLoading = ref(true)
+const readyPlayers = ref({})
 const rail = ref(null)
 const playerLoads = ref({})
 const loadQueue = []
@@ -88,6 +93,7 @@ function processQueue() {
 
 onMounted(async () => {
   window.addEventListener('message', handlePlayerMessage)
+  const timeout = setTimeout(() => request.abort(), 15000)
   try {
     const response = await fetch(`${base}/tiktok-videos`, {
       headers: { Accept: 'application/json' },
@@ -102,6 +108,7 @@ onMounted(async () => {
         /^\d{10,25}$/.test(String(video.video_id)) &&
         /^https:\/\/www\.tiktok\.com\/@[A-Za-z0-9._-]+\/video\/\d{10,25}\/?$/.test(video.url),
     )
+    videosLoading.value = false
     await nextTick()
     if (disposed || !rail.value) return
     const cards = rail.value.querySelectorAll('.tiktok-card')
@@ -122,6 +129,9 @@ onMounted(async () => {
     }
   } catch (error) {
     if (error.name !== 'AbortError') console.warn('No se pudieron cargar los videos.')
+  } finally {
+    clearTimeout(timeout)
+    videosLoading.value = false
   }
 })
 onBeforeUnmount(() => {
@@ -232,7 +242,15 @@ function handlePlayerMessage(event) {
   scroll-snap-align: start;
 }
 .tiktok-card__player {
+  position: relative;
   aspect-ratio: 9 / 16;
+}
+.tiktok-card__skeleton {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
 }
 .tiktok-card__player iframe {
   display: block;

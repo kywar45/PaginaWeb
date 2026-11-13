@@ -5,10 +5,7 @@
       :back-to="brandId ? '/marcas' : '/'"
       :parents="brandId ? [{ label: 'Marcas', to: '/marcas' }] : []"
     />
-    <div v-if="loadingBrands" class="brands-status" role="status">
-      <q-spinner color="primary" size="32px" />
-      <p>Cargando marcas...</p>
-    </div>
+    <LoadingSkeleton v-if="loadingBrands" :count="8" label="Cargando marcas..." />
     <div v-else-if="brandsError" class="brands-status" role="alert">
       <p>{{ brandsError }}</p>
       <q-btn no-caps color="primary" label="Reintentar" @click="loadBrands" />
@@ -23,7 +20,7 @@
           class="brand-card"
         >
           <span class="brand-card__visual" aria-hidden="true">
-            <img
+            <img v-image-skeleton
               v-if="brand.logo && !failedLogos.has(brand.id)"
               :src="brand.logo"
               alt=""
@@ -52,10 +49,7 @@
           >{{ brand.nombre }}</RouterLink
         >
       </nav>
-      <div v-if="loadingProducts" class="brands-status" role="status">
-        <q-spinner color="primary" size="32px" />
-        <p>Cargando productos...</p>
-      </div>
+      <LoadingSkeleton v-if="loadingProducts" :count="8" label="Cargando productos..." />
       <div v-else-if="productsError" class="brands-status" role="alert">
         <p>{{ productsError }}</p>
         <q-btn no-caps color="primary" label="Reintentar" @click="loadProducts" />
@@ -76,11 +70,10 @@
             class="brand-product"
           >
             <div class="brand-product__image">
-              <SaleBadge
-                v-if="product.tiene_descuento"
-                :percentage="product.porcentaje_descuento"
+              <ProductBadge
+                :product="product"
               />
-              <img
+              <img v-image-skeleton
                 :src="product.imagen"
                 :alt="product.nombre"
                 loading="lazy"
@@ -111,7 +104,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import ProductCardInfo from 'src/components/ProductCardInfo.vue'
-import SaleBadge from 'src/components/SaleBadge.vue'
+import ProductBadge from 'src/components/ProductBadge.vue'
 import StorePagination from 'src/components/StorePagination.vue'
 import { getBrands } from 'src/services/brandApi'
 import { getProducts } from 'src/services/productApi'

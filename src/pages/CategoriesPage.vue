@@ -1,10 +1,7 @@
 <template>
   <q-page class="categories-page">
     <PageBreadcrumbs title="Categorías" />
-    <div v-if="loading" class="q-pa-xl text-center" role="status">
-      <q-spinner color="primary" size="32px" />
-      <p>Cargando categorías...</p>
-    </div>
+    <LoadingSkeleton v-if="loading" variant="categories" label="Cargando categorías..." />
     <div v-else-if="errorMessage" class="q-pa-lg text-center" role="alert">
       <p>{{ errorMessage }}</p>
       <q-btn no-caps color="primary" label="Reintentar" @click="loadCategories" />
@@ -27,7 +24,7 @@
           @click="selectCategory(category)"
         >
           <span class="category-selector__image"
-            ><img :src="category.svgIcon" alt="" loading="lazy" @error="fallbackImage"
+            ><img v-image-skeleton :src="category.svgIcon" alt="" loading="lazy" @error="fallbackImage"
           /></span>
           <span>{{ category.name }}</span>
         </button>

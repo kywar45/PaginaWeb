@@ -1,10 +1,7 @@
 <template>
   <q-page class="product-page">
     <PageBreadcrumbs :title="product?.nombre || 'Producto'" :back-to="backTo" :parents="parents" />
-    <div v-if="loading" class="product-page__status" role="status">
-      <q-spinner color="primary" size="36px" />
-      <p>Cargando producto...</p>
-    </div>
+    <LoadingSkeleton v-if="loading" variant="product" label="Cargando producto..." />
     <div v-else-if="errorMessage" class="product-page__status" role="alert">
       <q-icon name="inventory_2" size="42px" color="primary" />
       <h1>{{ notFound ? 'Producto no disponible' : 'No pudimos cargar el producto' }}</h1>
@@ -22,7 +19,7 @@
               aria-label="Ampliar imagen del producto"
               @click="openViewer"
             >
-              <img
+              <img v-image-skeleton
                 :src="imageSource(images[imageIndex])"
                 :alt="`${product.nombre}, imagen ${imageIndex + 1}`"
                 fetchpriority="high"
@@ -66,7 +63,7 @@
               :aria-label="`Ver imagen ${index + 1}`"
               @click="imageIndex = index"
             >
-              <img :src="imageSource(image)" alt="" loading="lazy" @error="imageFailed" />
+              <img v-image-skeleton :src="imageSource(image)" alt="" loading="lazy" @error="imageFailed" />
             </button>
           </div>
         </section>
@@ -88,7 +85,10 @@
           <p v-if="shareMessage" class="product-share__message" role="status">{{ shareMessage }}</p>
 
           <h1>{{ product.nombre }}</h1>
-          <p class="product-details__code"><q-icon name="qr_code" aria-hidden="true" /><span>Código</span><strong>{{ product.codigo }}</strong></p>
+          <p class="product-details__code">
+            <q-icon name="qr_code" aria-hidden="true" /><span>Código</span
+            ><strong>{{ product.codigo }}</strong>
+          </p>
           <section v-if="description" class="product-description">
             <h2>Descripción del producto</h2>
             <p>{{ description }}</p>
@@ -110,22 +110,38 @@
               </span>
               <div v-if="product.tiene_descuento" class="product-pricing__offer">
                 <strong class="is-sale">{{ money(product.precio_final) }}</strong>
-                <SaleBadge :percentage="product.porcentaje_descuento" />
+                <ProductBadge :product="product" />
               </div>
-              <strong v-else>{{ money(product.precio_final) }}</strong>
+              <div v-else class="product-pricing__offer">
+                <strong>{{ money(purchaseQuote.price) }}</strong
+                ><ProductBadge :product="product" />
+              </div>
             </div>
             <span v-if="product.ahorro > 0" class="product-pricing__saving"
               >Ahorras {{ money(product.ahorro) }}</span
             >
+            <span v-if="canPurchase && !product.es_vip && !product.tiene_descuento" class="product-pricing__saving">
+              {{ purchaseQuote.type === 'caja' ? 'Precio por caja' : purchaseQuote.type === 'mayoreo' ? 'Precio de mayoreo' : 'Precio por unidad' }}
+              · {{ purchaseQuote.pieces }} piezas de este código
+              <template v-if="purchaseQuote.previous"> ({{ purchaseQuote.previous }} ya en tu carrito)</template>
+            </span>
           </div>
           <div v-if="priceTiers.length" class="product-tiers">
             <div v-for="tier in priceTiers" :key="tier.label">
-              <span>
-                <small v-if="tier.minimum > 0"
-                  >{{ tier.label }} A partir de {{ tier.minimum }} piezas</small
-                >
+              <span class="product-tiers__label">
+                <q-icon
+                  :name="tier.label === 'Mayoreo' ? 'inventory_2' : 'all_inbox'"
+                  aria-hidden="true"
+                />
+                {{ tier.label }}
               </span>
-              <strong>{{ money(tier.price) }}</strong>
+              <span class="product-tiers__price"
+                ><strong>{{ money(tier.price) }}</strong
+                ><span>/ pieza</span></span
+              >
+              <small v-if="tier.minimum > 0"
+                >A partir de <b>{{ tier.minimum }} piezas</b></small
+              >
             </div>
           </div>
           <div class="product-purchase">
@@ -138,7 +154,7 @@
                   round
                   icon="remove"
                   aria-label="Quitar una pieza"
-                  :disable="product.estatus !== 1 || quantity <= 1"
+                  :disable="!canPurchase || quantity <= 1"
                   @click="quantity = Number(quantity) - 1"
                 />
                 <input
@@ -149,7 +165,7 @@
                   :max="MAX_CART_QUANTITY"
                   step="1"
                   inputmode="numeric"
-                  :disabled="product.estatus !== 1"
+                  :disabled="!canPurchase"
                   @input="cartMessage = ''"
                 />
                 <q-btn
@@ -158,7 +174,7 @@
                   round
                   icon="add"
                   aria-label="Añadir una pieza"
-                  :disable="product.estatus !== 1 || quantity >= MAX_CART_QUANTITY"
+                  :disable="!canPurchase || quantity >= MAX_CART_QUANTITY"
                   @click="quantity = Number(quantity || 0) + 1"
                 />
               </div>
@@ -167,9 +183,10 @@
               unelevated
               no-caps
               icon="add_shopping_cart"
-              :label="product.estatus === 0 ? 'Agotado' : 'Agregar al carrito'"
+              :label="canPurchase ? 'Agregar al carrito' : 'Agotado'"
               class="product-purchase__add"
-              :disable="product.estatus !== 1"
+              :loading="addingToCart"
+              :disable="!canPurchase || addingToCart"
               @click="addToCart"
             />
           </div>
@@ -179,12 +196,18 @@
             :class="{ 'is-error': cartError }"
             :role="cartError ? 'alert' : 'status'"
           >
-            <span>{{ cartMessage }}</span>
+            <span class="product-purchase__message-text"
+              ><q-icon :name="cartError ? 'error_outline' : 'check_circle'" aria-hidden="true" />{{
+                cartMessage
+              }}</span
+            >
             <RouterLink v-if="!cartError" to="/carrito"
               >Ver carrito <q-icon name="arrow_forward"
             /></RouterLink>
           </div>
-          <p class="product-details__help">¿Tienes dudas? Llámanos al <a href="tel:+525524954670">55 2495 4670</a>.</p>
+          <p class="product-details__help">
+            ¿Tienes dudas? Llámanos al <a href="tel:+525524954670">55 2495 4670</a>.
+          </p>
         </section>
       </div>
       <section
@@ -205,7 +228,7 @@
             :class="{ 'is-selected': variant.id_producto === product.id_producto }"
             :aria-current="variant.id_producto === product.id_producto ? 'page' : undefined"
           >
-            <img
+            <img v-image-skeleton
               :src="imageSource(variant.imagen)"
               :alt="variant.nombre"
               loading="lazy"
@@ -268,11 +291,8 @@
             class="related-product-card"
           >
             <div class="related-product-card__image">
-              <SaleBadge
-                v-if="related.tiene_descuento"
-                :percentage="related.porcentaje_descuento"
-              />
-              <img
+              <ProductBadge :product="related" />
+              <img v-image-skeleton
                 :src="imageSource(related.imagen)"
                 :alt="related.nombre"
                 loading="lazy"
@@ -314,7 +334,7 @@
           <q-btn flat round icon="close" aria-label="Cerrar visor" @click="viewerOpen = false" />
         </div>
         <div ref="viewerStage" class="image-viewer__stage">
-          <img
+          <img v-image-skeleton
             v-if="viewerOpen"
             :src="imageSource(images[imageIndex])"
             :alt="product?.nombre"
@@ -353,32 +373,54 @@ import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import ProductAvailability from 'src/components/ProductAvailability.vue'
 import ProductViews from 'src/components/ProductViews.vue'
 import ProductCardInfo from 'src/components/ProductCardInfo.vue'
-import SaleBadge from 'src/components/SaleBadge.vue'
+import ProductBadge from 'src/components/ProductBadge.vue'
 import { getProduct } from 'src/services/productApi'
 import { getCategories } from 'src/services/categoryApi'
 import { catalogLocation } from 'src/utils/catalogRoutes'
 import { productLocation } from 'src/utils/productRoutes'
 import { publicAsset } from 'src/utils/publicAsset'
 import { useCart, MAX_CART_QUANTITY } from 'src/services/cart'
+import { useAuthSession } from 'src/services/authSession'
+import { previewCartPrice } from 'src/utils/cartPricing'
 import { copyToClipboard } from 'quasar'
 
 const route = useRoute()
 const router = useRouter()
-const { addProduct } = useCart()
+const { addProduct, items: cartItems } = useCart()
+const { loadCurrentUser } = useAuthSession()
 const quantity = ref(1)
 const cartMessage = ref('')
 const cartError = ref(false)
-function addToCart() {
+const addingToCart = ref(false)
+async function addToCart() {
+  if (addingToCart.value) return
+  const id = product.value.id_producto
+  const pieces = Number(quantity.value)
+  addingToCart.value = true
   try {
-    addProduct(product.value, Number(quantity.value))
+    await loadCurrentUser()
+    const latest = await getProduct(id)
+    if (Number(route.params.id) !== id) return
+    product.value = latest
+    const cartItem = await addProduct(latest, pieces)
+    if (Number(route.params.id) !== id) return
     cartError.value = false
-    cartMessage.value = `${quantity.value} ${Number(quantity.value) === 1 ? 'pieza agregada' : 'piezas agregadas'} al carrito.`
+    cartMessage.value = `${pieces} ${pieces === 1 ? 'pieza agregada' : 'piezas agregadas'} al carrito.`
+    if (cartItem && ['mayoreo', 'caja'].includes(cartItem.tipo_precio)) {
+      cartMessage.value += ` Precio ${cartItem.tipo_precio === 'caja' ? 'por caja' : 'de mayoreo'}: ${money(cartItem.precio_final)} por pieza (${cartItem.piezas_codigo} del mismo código).`
+    }
   } catch (error) {
     cartError.value = true
     cartMessage.value = error.message
+  } finally {
+    addingToCart.value = false
   }
 }
 const product = ref(null)
+const purchaseQuote = computed(() => product.value
+  ? previewCartPrice(product.value, Number(quantity.value), cartItems.value)
+  : { price: 0, type: 'unidad', pieces: 0, previous: 0 })
+const canPurchase = computed(() => !!product.value && product.value.puede_comprar === true)
 const categories = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
@@ -484,7 +526,7 @@ const backTo = computed(() => {
   return parents.value.at(-1)?.to || '/'
 })
 const priceTiers = computed(() =>
-  product.value && !product.value.tiene_descuento
+  product.value && !product.value.tiene_descuento && !product.value.es_vip
     ? [
         {
           label: 'Mayoreo',
@@ -718,7 +760,36 @@ onBeforeUnmount(() => request?.abort())
   min-height: 42px;
   padding: 7px 18px;
   border-radius: 10px;
-  background: linear-gradient(112deg, #ff4f79, #f43f6f 48%, #df2f61);
+  background:
+    linear-gradient(
+      158deg,
+      transparent 0 17%,
+      rgba(255, 255, 255, 0.08) 17.4% 20.4%,
+      transparent 20.8% 34%,
+      rgba(255, 255, 255, 0.06) 34.4% 37%,
+      transparent 37.4%
+    ),
+    linear-gradient(
+      20deg,
+      transparent 0 70%,
+      rgba(255, 255, 255, 0.07) 70.4% 73.5%,
+      transparent 74%
+    ),
+    radial-gradient(
+      110% 72% at -2% 10%,
+      transparent 63%,
+      rgba(255, 255, 255, 0.14) 64%,
+      rgba(255, 255, 255, 0.035) 66%,
+      transparent 68%
+    ),
+    radial-gradient(
+      115% 76% at 103% 94%,
+      transparent 60%,
+      rgba(255, 255, 255, 0.12) 61%,
+      rgba(255, 255, 255, 0.03) 63%,
+      transparent 65%
+    ),
+    linear-gradient(112deg, #ff4f79, #f43f6f 48%, #df2f61);
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -734,9 +805,23 @@ onBeforeUnmount(() => request?.abort())
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 6px;
-  padding: 12px 0 0;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #b8e3c7;
+  border-radius: 12px;
+  background: #effbf3;
   color: #15803d;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.product-purchase__message-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.product-purchase__message-text .q-icon {
+  flex-shrink: 0;
+  font-size: 21px;
 }
 .product-purchase__message a {
   color: #d52c60;
@@ -744,6 +829,8 @@ onBeforeUnmount(() => request?.abort())
   text-decoration: none;
 }
 .product-purchase__message.is-error {
+  border-color: #fecaca;
+  background: #fff1f2;
   color: #b91c1c;
 }
 @media (max-width: 370px) {
@@ -1079,7 +1166,7 @@ onBeforeUnmount(() => request?.abort())
   color: #bd2855;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
 }
 .product-details__meta {
   display: flex;
@@ -1162,33 +1249,58 @@ onBeforeUnmount(() => request?.abort())
   font-size: 10px;
 }
 .product-tiers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
   margin-top: 16px;
 }
 .product-tiers > div {
   display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 15px;
+  border: 1px solid #f0dce5;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff 35%, #fff8fb);
+}
+.product-tiers__label {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid #f4e8ee;
-  color: #674b59;
-  font-size: 13px;
+  gap: 6px;
+  color: #745562;
+  font-size: 12px;
+  font-weight: 600;
+}
+.product-tiers__label .q-icon {
+  color: #d66a8c;
+  font-size: 17px;
+}
+.product-tiers__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px;
+}
+.product-tiers__price > span {
+  color: #a68a97;
+  font-size: 10px;
 }
 .product-tiers small {
-  display: inline-block;
-  margin-top: 6px;
-  padding: 5px 8px;
-  border: 1px solid #f3c5d5;
-  border-radius: 7px;
-  background: #fff0f5;
-  color: #c72658;
-  font-size: 13px;
-  font-weight: 700;
+  color: #967484;
+  font-size: 11px;
   line-height: 1.4;
+}
+.product-tiers small b {
+  color: #c52a59;
+  font-weight: 700;
 }
 .product-tiers strong {
   color: #d82e60;
-  font-size: 17px;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 .product-details__minimum {
   color: #947a87;

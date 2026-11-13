@@ -4,7 +4,19 @@
     <h1>
       Mi carrito <small>{{ cartCount }} piezas</small>
     </h1>
-    <div v-if="!items.length" class="cart-empty">
+    <q-banner v-if="mutationError" rounded class="cart-feedback" role="alert">
+      {{ mutationError }}
+      <template #action>
+        <q-btn flat no-caps label="Actualizar carrito" :disable="busy" @click="refreshCart" />
+      </template>
+    </q-banner>
+    <q-linear-progress v-if="busy && !refreshing" indeterminate color="primary" aria-label="Guardando carrito" />
+    <LoadingSkeleton v-if="refreshing" variant="cart" :count="3" label="Cargando carrito y precios..." />
+    <div v-else-if="refreshError" class="cart-empty" role="alert">
+      <p>No se pudieron actualizar los precios.</p>
+      <q-btn no-caps color="primary" label="Reintentar" @click="refreshCart" />
+    </div>
+    <div v-else-if="!items.length" class="cart-empty">
       <q-icon name="shopping_bag" size="48px" />
       <p>Tu carrito está vacío.</p>
       <q-btn no-caps color="primary" unelevated label="Explorar productos" to="/categorias" />
@@ -13,21 +25,29 @@
       <div class="cart-items">
         <article v-for="item in items" :key="item.id_producto" class="cart-item">
           <RouterLink :to="productLocation(item)"
-            ><img :src="item.imagen || fallback" :alt="item.nombre" @error="imageFailed"
+            ><img v-image-skeleton :src="item.imagen || fallback" :alt="item.nombre" @error="imageFailed"
           /></RouterLink>
           <div class="cart-item__details">
             <RouterLink :to="productLocation(item)">{{ item.nombre }}</RouterLink>
-            <small>{{ item.codigo }}</small>
-            <span>{{ money(item.precio_final) }} por pieza</span>
+            <div class="cart-item__meta">
+              <small class="cart-item__code">{{ item.codigo }}</small>
+              <ProductBadge :product="item" />
+            </div>
+            <div class="cart-item__price">
+              <del v-if="item.tiene_descuento && item.precio_normal > item.precio_final">{{ money(item.precio_normal) }}</del>
+              <strong :class="{ 'cart-item__sale-price': item.tiene_descuento }">{{ money(item.precio_final) }}</strong>
+              <span>/ pieza</span>
+            </div>
+            <small v-if="!item.puede_comprar">No disponible. No se incluye en el total.</small>
             <div class="cart-item__quantity">
               <q-btn
                 flat
                 round
                 dense
                 icon="remove"
-                :disable="item.quantity <= 1"
+                :disable="busy || item.quantity <= 1"
                 :aria-label="`Quitar una pieza de ${item.nombre}`"
-                @click="setQuantity(item.id_producto, item.quantity - 1)"
+                @click="changeQuantity(item.id_producto, item.quantity - 1)"
               />
               <span>{{ item.quantity }}</span>
               <q-btn
@@ -35,9 +55,9 @@
                 round
                 dense
                 icon="add"
-                :disable="item.quantity >= MAX_CART_QUANTITY"
+                :disable="busy || item.puede_comprar === false || item.quantity >= MAX_CART_QUANTITY"
                 :aria-label="`Añadir una pieza de ${item.nombre}`"
-                @click="setQuantity(item.id_producto, item.quantity + 1)"
+                @click="changeQuantity(item.id_producto, item.quantity + 1)"
               />
             </div>
           </div>
@@ -47,15 +67,34 @@
               round
               dense
               icon="delete_outline"
+              :disable="busy"
               :aria-label="`Eliminar ${item.nombre}`"
-              @click="removeProduct(item.id_producto)"
+              @click="deleteProduct(item.id_producto)"
             />
-            <strong>{{ money(item.precio_final * item.quantity) }}</strong>
+            <strong :class="{ 'cart-item__sale-price': item.tiene_descuento }">{{ money(item.subtotal) }}</strong>
           </div>
         </article>
       </div>
-      <div class="cart-total">
-        <span>Total</span><strong>{{ money(total) }}</strong>
+      <div class="cart-total" role="status" aria-label="Total del carrito" :aria-busy="busy">
+        <span class="cart-total__desktop">Total <q-spinner v-if="busy" size="16px" aria-label="Actualizando total" /></span>
+        <strong class="cart-total__desktop">{{ money(total) }}</strong>
+        <div class="cart-summary-mobile">
+          <div class="cart-summary-mobile__heading">
+            <div>
+              <span class="cart-summary-mobile__label">Total de tu compra</span>
+              <p>{{ items.length }} {{ items.length === 1 ? 'producto' : 'productos' }} · {{ cartCount }} {{ cartCount === 1 ? 'pieza' : 'piezas' }}</p>
+            </div>
+            <div class="cart-summary-mobile__amount">
+              <q-spinner v-if="busy" size="16px" aria-label="Actualizando total" />
+              <strong>{{ money(total) }}</strong>
+            </div>
+          </div>
+          <div v-if="savings > 0" class="cart-summary-mobile__savings">
+            <span><q-icon name="savings" aria-hidden="true" /> Estás ahorrando</span>
+            <strong>{{ money(savings) }}</strong>
+          </div>
+          <q-btn unelevated no-caps label="Continuar con mi pedido" icon-right="arrow_forward" to="/checkout" class="cart-summary-mobile__continue" :disable="busy || total <= 0" />
+        </div>
       </div>
     </template>
   </q-page>
@@ -63,10 +102,41 @@
 
 <script setup>
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
+import ProductBadge from 'src/components/ProductBadge.vue'
+import { onMounted, ref } from 'vue'
+import { useAuthSession } from 'src/services/authSession'
 import { useCart, MAX_CART_QUANTITY } from 'src/services/cart'
 import { productLocation } from 'src/utils/productRoutes'
 import { publicAsset } from 'src/utils/publicAsset'
-const { items, cartCount, total, setQuantity, removeProduct } = useCart()
+const { items, cartCount, total, savings, busy, setQuantity, removeProduct, loadCart } = useCart()
+const { loadCurrentUser } = useAuthSession()
+const refreshing = ref(true)
+const refreshError = ref(false)
+const mutationError = ref('')
+async function refreshCart() {
+  refreshing.value = true
+  mutationError.value = ''
+  try {
+    await loadCurrentUser()
+    await loadCart()
+    refreshError.value = false
+  } catch {
+    refreshError.value = true
+  } finally {
+    refreshing.value = false
+  }
+}
+async function changeQuantity(id, quantity) {
+  mutationError.value = ''
+  try { await setQuantity(id, quantity) }
+  catch (error) { mutationError.value = error.message }
+}
+async function deleteProduct(id) {
+  mutationError.value = ''
+  try { await removeProduct(id) }
+  catch (error) { mutationError.value = error.message }
+}
+onMounted(refreshCart)
 const fallback = publicAsset('img/product-no-image.svg')
 const money = (value) =>
   Number(value).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
@@ -76,6 +146,11 @@ function imageFailed(event) {
 </script>
 
 <style scoped>
+.cart-feedback {
+  margin-bottom: 16px;
+  background: #fff1f6;
+  color: #94224d;
+}
 .cart-page {
   max-width: 1000px;
   margin: 0 auto;
@@ -141,6 +216,40 @@ function imageFailed(event) {
   color: #927784;
   font-size: 12px;
 }
+.cart-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 9px;
+}
+.cart-item__code {
+  color: #ed396b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.cart-item__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px;
+}
+.cart-item__price del {
+  color: #a18b95;
+  font-size: 11px;
+}
+.cart-item__price strong {
+  color: #ec326a;
+  font-size: 16px;
+  line-height: 1.3;
+}
+.cart-item__price > span {
+  color: #927784;
+  font-size: 11px;
+}
+.cart-item .cart-item__sale-price {
+  color: #00a844;
+}
 .cart-item__quantity {
   display: flex;
   align-items: center;
@@ -163,22 +272,68 @@ function imageFailed(event) {
   font-size: 17px;
 }
 .cart-total {
+  position: fixed;
+  z-index: 1900;
+  left: 50%;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 20px;
-  padding: 20px;
-  border-radius: 16px;
+  width: calc(100% - 48px);
+  max-width: 952px;
+  min-height: 70px;
+  padding: 16px 20px;
+  border: 1px solid #f6cddd;
+  border-radius: 18px;
   background: #fff1f6;
+  box-shadow: 0 8px 32px rgba(125, 33, 68, 0.16);
   color: #743c53;
+}
+.cart-total > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .cart-total strong {
   color: #df2f61;
   font-size: 24px;
 }
+.cart-summary-mobile { display: none; }
+@media (max-width: 1023px) {
+  .cart-page {
+    padding-bottom: calc(290px + env(safe-area-inset-bottom, 0px));
+  }
+  .cart-total {
+    bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+    width: calc(100% - 24px);
+    max-width: 480px;
+    min-height: 0;
+    padding: 0;
+    border-color: #f3dce5;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 8px 32px rgba(88, 36, 57, 0.16);
+  }
+  .cart-total__desktop { display: none !important; }
+  .cart-summary-mobile { display: block; width: 100%; padding: 15px; }
+  .cart-summary-mobile__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .cart-summary-mobile__heading > div:first-child { min-width: 0; }
+  .cart-summary-mobile__label { color: #8a7280; font-size: 11px; line-height: 1.4; }
+  .cart-summary-mobile__heading p { margin: 3px 0 0; color: #654655; font-size: 12px; line-height: 1.4; }
+  .cart-summary-mobile__amount { display: flex; flex-shrink: 0; align-items: center; gap: 6px; }
+  .cart-summary-mobile__amount strong { color: #412536; font-size: clamp(19px, 5.5vw, 24px); font-weight: 800; letter-spacing: -0.03em; white-space: nowrap; }
+  .cart-summary-mobile__savings { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 9px 11px; border-radius: 10px; background: #ecf8f0; color: #177345; }
+  .cart-summary-mobile__savings > span { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .cart-summary-mobile__savings .q-icon { font-size: 17px; }
+  .cart-summary-mobile__savings strong { color: #177345; font-size: 15px; font-weight: 700; white-space: nowrap; }
+  .cart-summary-mobile__continue { width: 100%; min-height: 44px; margin-top: 12px; border-radius: 12px; background: linear-gradient(110deg, #ff4f79, #e72e65); color: #fff; font-size: 13px; font-weight: 700; }
+  .cart-summary-mobile__continue :deep(.q-icon) { font-size: 18px; }
+}
 @media (max-width: 599px) {
   .cart-page {
-    padding: 10px 12px 110px;
+    padding: 10px 12px calc(290px + env(safe-area-inset-bottom, 0px));
   }
   .cart-item {
     gap: 8px;

@@ -1,7 +1,7 @@
 <template>
   <q-page class="branches-page">
     <PageBreadcrumbs title="Sucursales" />
-    <div v-if="loading" class="branches-status" role="status"><q-spinner color="primary" size="32px" /><p>Cargando sucursales...</p></div>
+    <LoadingSkeleton v-if="loading" variant="list" :count="3" label="Cargando sucursales..." />
     <div v-else-if="errorMessage" class="branches-status" role="alert"><p>{{ errorMessage }}</p><q-btn no-caps color="primary" label="Reintentar" @click="loadBranches" /></div>
     <div v-else-if="branches.length" class="branches-grid">
       <article v-for="branch in branches" :key="branch.id" class="branch-card">

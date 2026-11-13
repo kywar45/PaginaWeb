@@ -6,7 +6,7 @@
     :aria-label="label"
     :style="spriteStyle"
   />
-  <img
+  <img v-image-skeleton
     v-else
     class="menu-product-photo menu-product-photo--image"
     :src="src"

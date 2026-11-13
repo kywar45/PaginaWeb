@@ -16,7 +16,7 @@
             </RouterLink>
           </h2>
           <div class="section-heading__actions">
-            <div v-if="offerPageCount > 1" class="offer-carousel-dots">
+            <div v-if="!productsLoading.offers && offerPageCount > 1" class="offer-carousel-dots">
               <button
                 v-for="page in offerPageCount"
                 :key="page"
@@ -28,7 +28,11 @@
             </div>
           </div>
         </div>
-        <div class="offer-carousel-shell">
+        <LoadingSkeleton v-if="productsLoading.offers" variant="rail" label="Cargando ofertas..." />
+        <div v-else-if="productErrors.offers" class="home-load-error" role="alert">
+          <p>No pudimos cargar las ofertas.</p><q-btn flat no-caps color="primary" label="Reintentar" @click="loadHomeProducts" />
+        </div>
+        <div v-else-if="offerProducts.length" class="offer-carousel-shell">
           <q-btn
             unelevated
             round
@@ -49,8 +53,8 @@
               @keydown.space.prevent="openProduct(product)"
             >
               <div class="offer-image">
-                <SaleBadge class="card-sale-badge" :percentage="product.porcentaje_descuento" />
-                <img
+                <ProductBadge class="card-sale-badge" :product="product" />
+                <img v-image-skeleton
                   :src="product.imagen"
                   :alt="product.nombre"
                   loading="lazy"
@@ -86,7 +90,7 @@
             </RouterLink>
           </h2>
           <div class="section-heading__actions">
-            <div v-if="newPageCount > 1" class="offer-carousel-dots">
+            <div v-if="!productsLoading.newest && newPageCount > 1" class="offer-carousel-dots">
               <button
                 v-for="page in newPageCount"
                 :key="page"
@@ -98,7 +102,11 @@
             </div>
           </div>
         </div>
-        <div class="offer-carousel-shell">
+        <LoadingSkeleton v-if="productsLoading.newest" variant="rail" label="Cargando productos nuevos..." />
+        <div v-else-if="productErrors.newest" class="home-load-error" role="alert">
+          <p>No pudimos cargar los productos nuevos.</p><q-btn flat no-caps color="primary" label="Reintentar" @click="loadHomeProducts" />
+        </div>
+        <div v-else-if="newestProducts.length" class="offer-carousel-shell">
           <q-btn
             unelevated
             round
@@ -121,12 +129,11 @@
               <div class="offer-image">
                 <div class="card-badges">
                   <NewBadge />
-                  <SaleBadge
-                    v-if="product.tiene_descuento"
-                    :percentage="product.porcentaje_descuento"
+                  <ProductBadge
+                    :product="product"
                   />
                 </div>
-                <img
+                <img v-image-skeleton
                   :src="product.imagen"
                   :alt="product.nombre"
                   loading="lazy"
@@ -158,7 +165,11 @@
             <p>Descubre los favoritos de nuestra comunidad.</p>
           </div>
         </div>
-        <div v-if="featuredViewedProduct" class="featured-products__layout">
+        <LoadingSkeleton v-if="productsLoading.viewed" variant="featured" :count="8" label="Cargando productos más vistos..." />
+        <div v-else-if="productErrors.viewed" class="home-load-error" role="alert">
+          <p>No pudimos cargar los productos más vistos.</p><q-btn flat no-caps color="primary" label="Reintentar" @click="loadHomeProducts" />
+        </div>
+        <div v-else-if="featuredViewedProduct" class="featured-products__layout">
           <article class="featured-product-main" role="button" tabindex="0"
             @click="openProduct(featuredViewedProduct)"
             @keydown.enter="openProduct(featuredViewedProduct)"
@@ -175,12 +186,11 @@
               <span class="featured-product-main__hint">Descubrir producto <q-icon name="arrow_forward" /></span>
             </div>
             <div class="featured-product-main__image">
-              <SaleBadge
-                v-if="featuredViewedProduct.tiene_descuento"
+              <ProductBadge
                 class="card-sale-badge"
-                :percentage="featuredViewedProduct.porcentaje_descuento"
+                :product="featuredViewedProduct"
               />
-              <img :src="featuredViewedProduct.imagen" :alt="featuredViewedProduct.nombre" loading="lazy" @error="useFallbackImage" />
+              <img v-image-skeleton :src="featuredViewedProduct.imagen" :alt="featuredViewedProduct.nombre" loading="lazy" @error="useFallbackImage" />
             </div>
           </article>
           <div class="featured-products__grid">
@@ -190,8 +200,8 @@
               @keydown.enter="openProduct(product)"
               @keydown.space.prevent="openProduct(product)">
               <div class="featured-mini-card__image">
-                <SaleBadge v-if="product.tiene_descuento" class="card-sale-badge" :percentage="product.porcentaje_descuento" />
-                <img :src="product.imagen" :alt="product.nombre" loading="lazy" @error="useFallbackImage" />
+                <ProductBadge class="card-sale-badge" :product="product" />
+                <img v-image-skeleton :src="product.imagen" :alt="product.nombre" loading="lazy" @error="useFallbackImage" />
               </div>
               <ProductCardInfo :product="product" compact />
             </article>
@@ -262,13 +272,12 @@
                 @keydown.enter="openProduct(product)"
                 @keydown.space.prevent="openProduct(product)"
               >
-                <SaleBadge
-                  v-if="product.tiene_descuento"
+                <ProductBadge
                   class="card-sale-badge"
-                  :percentage="product.porcentaje_descuento"
+                  :product="product"
                 />
                 <span class="category-product-card__image">
-                  <img
+                  <img v-image-skeleton
                     :src="product.imagen"
                     :alt="product.nombre"
                     loading="lazy"
@@ -347,10 +356,9 @@
             class="mini-product"
             @click="openProduct(product)"
           >
-            <img :src="product.imagen" :alt="product.nombre" @error="useFallbackImage" /><span
-              >{{ product.nombre }}<ProductViews :product="product" /><NewBadge /><SaleBadge
-                v-if="product.tiene_descuento"
-                :percentage="product.porcentaje_descuento"
+            <img v-image-skeleton :src="product.imagen" :alt="product.nombre" @error="useFallbackImage" /><span
+              >{{ product.nombre }}<ProductViews :product="product" /><NewBadge /><ProductBadge
+                :product="product"
               /><strong :class="{ 'price--sale': product.tiene_descuento }">{{
                 money(product.precio_final)
               }}</strong></span
@@ -369,15 +377,13 @@ import ProductViews from 'src/components/ProductViews.vue'
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import SaleBadge from 'src/components/SaleBadge.vue'
+import ProductBadge from 'src/components/ProductBadge.vue'
 import NewBadge from 'src/components/NewBadge.vue'
 import TikTokCarousel from 'src/components/TikTokCarousel.vue'
-import { menuFallbackCategories } from 'src/data/categoryMenu'
 import StoreBannerCarousel from 'src/components/StoreBannerCarousel.vue'
 import { getBanners } from 'src/services/bannerApi'
 import { getCategories } from 'src/services/categoryApi'
 import { getProducts, getRandomSubcategoryProducts } from 'src/services/productApi'
-import { mockOfferProducts, mockMostViewed, mockNewestProducts } from 'src/data/mockStore'
 import { publicAsset } from 'src/utils/publicAsset'
 const categoriesOpen = ref(false)
 const route = useRoute()
@@ -395,15 +401,17 @@ const newPage = ref(0)
 const newPageCount = ref(1)
 const bannerRequest = new AbortController()
 const categoryRequest = new AbortController()
-const productRequest = new AbortController()
-const categories = ref(menuFallbackCategories)
-const offerProducts = ref(mockOfferProducts)
-const newestProducts = ref(mockNewestProducts)
-const mostViewedProducts = ref(mockMostViewed)
+let productRequest = null
+const categories = ref([])
+const offerProducts = ref([])
+const newestProducts = ref([])
+const mostViewedProducts = ref([])
+const productsLoading = ref({ offers: true, newest: true, viewed: true })
+const productErrors = ref({})
 const featuredViewedProduct = computed(() => mostViewedProducts.value[0] || null)
 const secondaryViewedProducts = computed(() => mostViewedProducts.value.slice(1, 9))
 const randomSubcategoryGroups = ref([])
-const randomSubcategoriesLoading = ref(false)
+const randomSubcategoriesLoading = ref(true)
 const fallbackProductImage = publicAsset('img/product-no-image.svg')
 let randomCategoryRequest = null
 
@@ -439,26 +447,37 @@ onMounted(async () => {
     clearTimeout(timeout)
   }
 })
-onMounted(async () => {
-  const timeout = setTimeout(() => productRequest.abort(), 15000)
+async function loadHomeProducts() {
+  productRequest?.abort()
+  const current = new AbortController()
+  productRequest = current
+  productsLoading.value = { offers: true, newest: true, viewed: true }
+  productErrors.value = {}
+  const timeout = setTimeout(() => current.abort(), 15000)
+  const collections = [
+    ['offers', 'ofertas', 20, offerProducts],
+    ['newest', 'nuevos', 20, newestProducts],
+    ['viewed', 'vistos', 12, mostViewedProducts],
+  ]
   try {
-    const [offers, newest, viewed] = await Promise.all([
-      getProducts({ solo_disponibles: true, coleccion: 'ofertas', limit: 20, signal: productRequest.signal }),
-      getProducts({ solo_disponibles: true, coleccion: 'nuevos', limit: 20, signal: productRequest.signal }),
-      getProducts({ solo_disponibles: true, coleccion: 'vistos', limit: 12, signal: productRequest.signal }),
-    ])
-    offerProducts.value = offers.productos
-    newestProducts.value = newest.productos
-    mostViewedProducts.value = viewed.productos
-    await nextTick()
-    updateOfferPagination()
-    updateNewPagination()
-  } catch (error) {
-    if (error.name !== 'AbortError') console.warn('No se pudieron cargar los productos.')
-  } finally {
-    clearTimeout(timeout)
-  }
-})
+    await Promise.allSettled(collections.map(async ([key, coleccion, limit, target]) => {
+      try {
+        const result = await getProducts({ solo_disponibles: true, coleccion, limit, signal: current.signal })
+        if (productRequest === current) target.value = result.productos
+      } catch {
+        if (productRequest === current) productErrors.value[key] = true
+      } finally {
+        if (productRequest === current) {
+          productsLoading.value[key] = false
+          await nextTick()
+          updateOfferPagination()
+          updateNewPagination()
+        }
+      }
+    }))
+  } finally { clearTimeout(timeout) }
+}
+onMounted(loadHomeProducts)
 onMounted(() => {
   loadRandomSubcategories()
 })
@@ -469,7 +488,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   bannerRequest.abort()
   categoryRequest.abort()
-  productRequest.abort()
+  productRequest?.abort()
   randomCategoryRequest?.abort()
   window.removeEventListener('resize', updateCarouselsPagination)
 })
