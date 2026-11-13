@@ -34,12 +34,14 @@
             rounded
             dense
             placeholder="Buscar en Supernova"
+            maxlength="80"
+            @keyup.enter="submitSearch"
             aria-label="Buscar productos"
             class="sn-mobile-head__search"
             bg-color="white"
           >
             <template #prepend>
-              <q-icon name="search" />
+              <q-btn flat round dense icon="search" aria-label="Buscar productos" @click="submitSearch" />
             </template>
           </q-input>
 
@@ -49,9 +51,9 @@
             <q-icon name="local_offer" /> Ofertas
           </RouterLink>
           <RouterLink to="/nuevos"><q-icon name="shield" /> Nuevos</RouterLink>
-          <button type="button"><q-icon name="trending_up" /> Más vendidos</button>
-          <button type="button"><q-icon name="workspace_premium" /> Marcas</button>
-          <button type="button"><q-icon name="storefront" /> Sucursales</button>
+          <RouterLink to="/mas-vendidos"><q-icon name="trending_up" /> Más vendidos</RouterLink>
+          <RouterLink to="/marcas"><q-icon name="workspace_premium" /> Nuestras marcas</RouterLink>
+          <RouterLink to="/sucursales"><q-icon name="storefront" /> Sucursales</RouterLink>
         </nav>
       </div>
 
@@ -85,13 +87,16 @@
               rounded
               dense
               placeholder="Buscar productos..."
+              maxlength="80"
+              @keyup.enter="submitSearch"
               class="lt-md sn-mobile-search"
               bg-color="white"
               style="flex: 1"
               autofocus
             >
-              <template #append v-if="searchQuery">
+              <template #append>
                 <q-btn
+                  v-if="searchQuery"
                   flat
                   round
                   dense
@@ -100,6 +105,7 @@
                   color="grey"
                   @click="searchQuery = ''"
                 />
+                <q-btn flat round dense icon="search" aria-label="Buscar productos" @click="submitSearch" />
               </template>
             </q-input>
           </template>
@@ -135,6 +141,9 @@
               filled
               rounded
               placeholder="Buscar productos, marcas y más..."
+              maxlength="80"
+              aria-label="Buscar productos"
+              @keyup.enter="submitSearch"
               class="sn-search gt-sm"
               bg-color="white"
               style="width: 100%; max-width: 680px"
@@ -157,6 +166,8 @@
                   icon="search"
                   color="primary"
                   class="sn-search-submit"
+                  aria-label="Buscar productos"
+                  @click="submitSearch"
                 />
               </template>
             </q-input>
@@ -198,7 +209,7 @@
               size="md"
               class="q-ml-xs sn-cart-btn sn-header-icon-btn"
             >
-              <q-badge color="accent" floating rounded style="font-size: 10px">{{
+              <q-badge class="sn-cart-count" floating rounded>{{
                 cartCount
               }}</q-badge>
               <q-tooltip>Ver carrito</q-tooltip>
@@ -274,16 +285,18 @@
             no-caps
             icon="trending_up"
             label="Más vendidos"
+            to="/mas-vendidos"
             class="sn-desktop-nav__link"
           />
           <q-btn
             flat
             no-caps
             icon="workspace_premium"
-            label="Marcas"
+            label="Nuestras marcas"
+            to="/marcas"
             class="sn-desktop-nav__link"
           />
-          <q-btn flat no-caps icon="storefront" label="Sucursales" class="sn-desktop-nav__link" />
+          <q-btn flat no-caps icon="storefront" label="Sucursales" to="/sucursales" class="sn-desktop-nav__link" />
         </div>
       </div>
     </q-header>
@@ -629,6 +642,18 @@ onBeforeUnmount(() => {
 })
 
 const route = useRoute()
+watch(() => route.query.q, (value) => {
+  if (route.path === '/buscar') searchQuery.value = typeof value === 'string' ? value : ''
+}, { immediate: true })
+function submitSearch() {
+  const q = searchQuery.value.trim().replace(/\s+/g, ' ')
+  if (!q) return
+  searchQuery.value = q
+  searchOpen.value = false
+  categoriesMenu.value = false
+  leftDrawerOpen.value = false
+  router.push({ path: '/buscar', query: { q } })
+}
 watch(() => route.path, (path) => {
   if (path === '/categorias' || path === '/subcategoria' || path.startsWith('/catalogo/')) mobileTab.value = 'search'
   else if (path === '/') mobileTab.value = 'home'
@@ -856,5 +881,24 @@ async function showOffers() {
   .sn-footer-stores {
     grid-template-columns: 1fr;
   }
+}
+.sn-header .sn-cart-btn.sn-header-icon-btn .q-badge.sn-cart-count,
+.sn-header .sn-cart-btn.sn-header-icon-btn:hover .q-badge.sn-cart-count {
+  top: -3px;
+  right: -3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid #f7ccda;
+  border-radius: 12px;
+  background: #fff !important;
+  color: #b9184d !important;
+  box-shadow: 0 2px 6px rgba(124, 15, 50, .24);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
 }
 </style>

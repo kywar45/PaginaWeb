@@ -57,6 +57,20 @@ class ProductService
 
     public function listProducts($collection, $page, $limit, $subcategoryId = null, $onlyAvailable = false, $categoryId = null)
     {
+        if ($collection === 'mas_vendidos') {
+            $rows = $this->products->bestSellers($onlyAvailable, $subcategoryId, $categoryId);
+            $total = count($rows);
+            $items = array();
+            foreach (array_slice($rows, ($page - 1) * $limit, $limit) as $row) {
+                $items[] = $this->normalizeProduct($row);
+            }
+            $hasMore = $page * $limit < $total;
+            return array('productos' => $items, 'pagination' => array(
+                'page' => $page, 'limit' => $limit, 'total' => $total,
+                'total_pages' => (int) ceil($total / $limit), 'has_more' => $hasMore,
+                'next_page' => $hasMore ? $page + 1 : null,
+            ));
+        }
         $rows = $this->products->listPage($collection, $limit + 1, ($page - 1) * $limit, $subcategoryId, $onlyAvailable, $categoryId);
         $hasMore = count($rows) > $limit;
         $pagination = array(
@@ -87,6 +101,39 @@ class ProductService
         return array(
             'productos' => $items,
             'pagination' => $pagination,
+        );
+    }
+
+    public function listBrandProducts($brandId, $page, $limit, $onlyAvailable = false)
+    {
+        $total = $this->products->countBrand($brandId, $onlyAvailable);
+        $items = array();
+        foreach ($this->products->brandPage($brandId, $limit, ($page - 1) * $limit, $onlyAvailable) as $row) {
+            $items[] = $this->normalizeProduct($row);
+        }
+        $hasMore = $page * $limit < $total;
+        return array('marca_id' => $brandId, 'productos' => $items, 'pagination' => array(
+            'page' => $page, 'limit' => $limit, 'total' => $total,
+            'total_pages' => (int) ceil($total / $limit), 'has_more' => $hasMore,
+            'next_page' => $hasMore ? $page + 1 : null,
+        ));
+    }
+
+    public function searchProducts($query, $page, $limit, $sort = 'relevancia', $onlyAvailable = false, $offersOnly = false)
+    {
+        $total = $this->products->countSearch($query, $onlyAvailable, $offersOnly);
+        $items = array();
+        foreach ($this->products->searchPage($query, $limit, ($page - 1) * $limit, $sort, $onlyAvailable, $offersOnly) as $row) {
+            $items[] = $this->normalizeProduct($row);
+        }
+        $hasMore = $page * $limit < $total;
+        return array(
+            'search_query' => $query,
+            'search_filters' => array('orden' => $sort, 'solo_disponibles' => $onlyAvailable, 'solo_ofertas' => $offersOnly),
+            'productos' => $items,
+            'pagination' => array('page' => $page, 'limit' => $limit, 'total' => $total,
+                'total_pages' => (int) ceil($total / $limit), 'has_more' => $hasMore,
+                'next_page' => $hasMore ? $page + 1 : null),
         );
     }
 

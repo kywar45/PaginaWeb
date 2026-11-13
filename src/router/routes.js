@@ -5,9 +5,13 @@ const routes = [
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
       { path: 'ofertas', component: () => import('pages/OffersPage.vue') },
+      { path: 'mas-vendidos', component: () => import('pages/BestSellersPage.vue') },
+      { path: 'buscar', component: () => import('pages/SearchPage.vue') },
       { path: 'carrito', component: () => import('pages/CartPage.vue') },
       { path: 'nuevos', component: () => import('pages/NewProductsPage.vue') },
       { path: 'categorias', component: () => import('pages/CategoriesPage.vue') },
+      { path: 'sucursales', component: () => import('pages/BranchesPage.vue') },
+      { path: 'marcas/:id(\\d+)?', component: () => import('pages/BrandsPage.vue') },
       {
         path: 'producto/:id(\\d+)/:slug?',
         name: 'producto',

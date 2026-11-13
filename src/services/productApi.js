@@ -32,7 +32,11 @@ export async function getProducts({
   limit = 20,
   id_subcategoria,
   id_categoria,
+  id_marca,
   solo_disponibles = false,
+  q,
+  orden,
+  solo_ofertas = false,
   signal,
 } = {}) {
   const base = (import.meta.env.VITE_STORE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')
@@ -48,6 +52,10 @@ export async function getProducts({
     params.set('id_categoria', String(id_categoria))
 
   if (solo_disponibles) params.set('solo_disponibles', '1')
+  if (id_marca !== undefined && id_marca !== null) params.set('id_marca', String(id_marca))
+  if (q !== undefined) params.set('q', q)
+  if (orden !== undefined) params.set('orden', orden)
+  if (solo_ofertas) params.set('solo_ofertas', '1')
 
   const response = await fetch(`${base}/productos?${params}`, {
     headers: { Accept: 'application/json' },
@@ -58,6 +66,17 @@ export async function getProducts({
   if (!response.ok || payload?.success !== true || !Array.isArray(payload.data?.productos)) {
     throw new Error(payload?.error?.message || 'No se pudieron cargar los productos.')
   }
+  if (q !== undefined && payload.data.search_query !== q) {
+    throw new Error('El buscador todavía no está habilitado en el servidor.')
+  }
+  if (id_marca !== undefined && id_marca !== null && Number(payload.data.marca_id) !== Number(id_marca)) {
+    throw new Error('Actualiza la API para habilitar los productos por marca.')
+  }
+  if (q !== undefined && orden !== undefined && (
+    payload.data.search_filters?.orden !== orden ||
+    payload.data.search_filters?.solo_disponibles !== Boolean(solo_disponibles) ||
+    payload.data.search_filters?.solo_ofertas !== Boolean(solo_ofertas)
+  )) throw new Error('Actualiza la API del buscador para habilitar los filtros.')
 
   return {
     productos: payload.data.productos.map(normalizeProduct),

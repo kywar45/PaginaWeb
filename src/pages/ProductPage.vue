@@ -16,7 +16,6 @@
       <div class="product-layout">
         <section class="product-gallery" aria-label="Fotos del producto">
           <div class="product-gallery__main">
-            <SaleBadge v-if="product.tiene_descuento" :percentage="product.porcentaje_descuento" />
             <button
               type="button"
               class="product-gallery__open"
@@ -73,21 +72,23 @@
         </section>
 
         <section class="product-details" aria-label="Información del producto">
-          <span v-if="product.subcategoria?.name" class="product-details__category">{{
-            product.subcategoria.name
-          }}</span>
-          <h1>{{ product.nombre }}</h1>
-          <p class="product-details__code">{{ product.codigo }}</p>
           <div class="product-share" aria-label="Compartir producto">
             <q-btn flat no-caps dense icon="share" label="Compartir" @click="shareProduct" />
             <a :href="whatsappUrl" target="_blank" rel="noopener noreferrer"
               ><svg class="product-share__whatsapp" viewBox="0 0 24 24" aria-hidden="true">
-                <path fill="currentColor" d="M12 2a10 10 0 0 0-8.66 15L2 22l5.15-1.35A10 10 0 1 0 12 2Zm0 18a8 8 0 0 1-4.08-1.12l-.29-.17-3.05.8.81-2.97-.19-.31A8 8 0 1 1 12 20Zm4.4-5.55c-.24-.12-1.42-.7-1.64-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.18-.71-.63-1.19-1.42-1.33-1.66-.14-.24-.01-.37.11-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.19-.47-.39-.41-.54-.42h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.69 2.58 4.1 3.62.57.25 1.01.4 1.35.51.57.18 1.09.16 1.5.1.46-.07 1.42-.58 1.62-1.14.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28Z" />
-              </svg> WhatsApp</a
+                <path
+                  fill="currentColor"
+                  d="M12 2a10 10 0 0 0-8.66 15L2 22l5.15-1.35A10 10 0 1 0 12 2Zm0 18a8 8 0 0 1-4.08-1.12l-.29-.17-3.05.8.81-2.97-.19-.31A8 8 0 1 1 12 20Zm4.4-5.55c-.24-.12-1.42-.7-1.64-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.18-.71-.63-1.19-1.42-1.33-1.66-.14-.24-.01-.37.11-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.19-.47-.39-.41-.54-.42h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.69 2.58 4.1 3.62.57.25 1.01.4 1.35.51.57.18 1.09.16 1.5.1.46-.07 1.42-.58 1.62-1.14.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28Z"
+                />
+              </svg>
+              WhatsApp</a
             >
             <q-btn flat no-caps dense icon="link" label="Copiar enlace" @click="copyProductLink" />
           </div>
           <p v-if="shareMessage" class="product-share__message" role="status">{{ shareMessage }}</p>
+
+          <h1>{{ product.nombre }}</h1>
+          <p class="product-details__code"><q-icon name="qr_code" aria-hidden="true" /><span>Código</span><strong>{{ product.codigo }}</strong></p>
           <section v-if="description" class="product-description">
             <h2>Descripción del producto</h2>
             <p>{{ description }}</p>
@@ -99,12 +100,19 @@
               ><q-icon name="check_circle" /> Disponible</span
             >
           </div>
-          <div class="product-pricing">
+          <div
+            class="product-pricing"
+            :class="{ 'product-pricing--sale': product.tiene_descuento }"
+          >
             <div class="product-pricing__row">
-              <del v-if="product.tiene_descuento">{{ money(product.precio_normal) }}</del>
-              <strong :class="{ 'is-sale': product.tiene_descuento }">{{
-                money(product.precio_final)
-              }}</strong>
+              <span v-if="product.tiene_descuento" class="product-pricing__original">
+                <del>{{ money(product.precio_normal) }}</del>
+              </span>
+              <div v-if="product.tiene_descuento" class="product-pricing__offer">
+                <strong class="is-sale">{{ money(product.precio_final) }}</strong>
+                <SaleBadge :percentage="product.porcentaje_descuento" />
+              </div>
+              <strong v-else>{{ money(product.precio_final) }}</strong>
             </div>
             <span v-if="product.ahorro > 0" class="product-pricing__saving"
               >Ahorras {{ money(product.ahorro) }}</span
@@ -176,7 +184,7 @@
               >Ver carrito <q-icon name="arrow_forward"
             /></RouterLink>
           </div>
-          <p class="product-details__help">¿Tienes dudas? Llámanos al 55 2495 4670.</p>
+          <p class="product-details__help">¿Tienes dudas? Llámanos al <a href="tel:+525524954670">55 2495 4670</a>.</p>
         </section>
       </div>
       <section
@@ -591,7 +599,7 @@ onBeforeUnmount(() => request?.abort())
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 12px;
-  margin: 4px 0 18px;
+  margin: 0 0 14px;
   color: #bf3f69;
 }
 .product-share .q-btn {
@@ -682,7 +690,7 @@ onBeforeUnmount(() => request?.abort())
 .product-purchase__quantity > div {
   display: flex;
   align-items: center;
-  height: 46px;
+  height: 42px;
   padding: 3px;
   border: 1px solid #f0cedc;
   border-radius: 13px;
@@ -706,13 +714,20 @@ onBeforeUnmount(() => request?.abort())
   margin: 0;
 }
 .product-purchase__add {
-  flex: 1;
-  min-height: 46px;
-  border-radius: 13px;
+  flex: 0 1 auto;
+  min-height: 42px;
+  padding: 7px 18px;
+  border-radius: 10px;
   background: linear-gradient(112deg, #ff4f79, #f43f6f 48%, #df2f61);
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+}
+.product-purchase__add.disabled {
+  background: #e5e7eb !important;
+  color: #6b7280 !important;
+  opacity: 1 !important;
+  box-shadow: none;
 }
 .product-purchase__message {
   display: flex;
@@ -977,12 +992,6 @@ onBeforeUnmount(() => request?.abort())
   object-fit: contain;
   padding: 30px;
 }
-.product-gallery__main > .sale-badge {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 1;
-}
 .product-gallery__previous,
 .product-gallery__next {
   position: absolute;
@@ -1048,11 +1057,29 @@ onBeforeUnmount(() => request?.abort())
   overflow-wrap: anywhere;
 }
 .product-details__code {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   margin: 0 0 12px;
-  color: #f4456f;
-  font-size: 14px;
+  padding: 6px 10px;
+  border: 1px solid #efdce3;
+  border-radius: 7px;
+  background: #fff8fb;
+  color: #a12b51;
+  font-size: 12px;
+}
+.product-details__code .q-icon {
+  font-size: 17px;
+}
+.product-details__code > span {
+  color: #8d7781;
+  font-size: 11px;
+}
+.product-details__code > strong {
+  color: #bd2855;
+  font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
+  letter-spacing: .04em;
 }
 .product-details__meta {
   display: flex;
@@ -1071,25 +1098,53 @@ onBeforeUnmount(() => request?.abort())
 .product-pricing {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  padding: 20px;
-  border: 1px solid #f5e4eb;
-  border-radius: 18px;
-  background: #fff8fb;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .product-pricing__row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px 14px;
+}
+.product-pricing--sale {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.product-pricing--sale .product-pricing__row {
+  align-items: center;
+  gap: 6px;
+}
+.product-pricing--sale .product-pricing__original {
+  padding: 0;
+}
+.product-pricing--sale .product-pricing__original del {
+  color: #aaa;
+  font-size: 24px;
+  line-height: 1.2;
+}
+.product-pricing__offer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.product-pricing__original {
+  color: #8c7d83;
+  font-size: 12px;
 }
 .product-pricing__row del {
-  color: #a18a96;
-  font-size: 16px;
+  color: #8c7d83;
+  font-size: 14px;
 }
 .product-pricing__row strong {
   color: #ec326a;
-  font-size: 36px;
+  font-size: 28px;
   font-weight: 750;
   line-height: 1.2;
 }
@@ -1097,9 +1152,10 @@ onBeforeUnmount(() => request?.abort())
   color: #16a34a;
 }
 .product-pricing__saving {
+  width: fit-content;
   color: #15803d;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
 }
 .product-pricing__currency {
   color: #a28a96;
@@ -1160,9 +1216,14 @@ onBeforeUnmount(() => request?.abort())
 }
 .product-details__help {
   margin-top: 10px;
-  text-align: center;
+  text-align: left;
   color: #a28a96;
   font-size: 11px;
+}
+.product-details__help a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 .product-description {
   margin: 0 0 18px;
@@ -1202,7 +1263,8 @@ onBeforeUnmount(() => request?.abort())
     margin-top: 12px;
   }
   .product-gallery__main {
-    max-height: 320px;
+    width: 100%;
+    max-height: none;
   }
   .product-gallery__main > img {
     padding: 20px;
@@ -1214,10 +1276,13 @@ onBeforeUnmount(() => request?.abort())
     font-size: 23px;
   }
   .product-pricing {
-    padding: 16px;
+    padding: 0;
+  }
+  .product-pricing--sale {
+    padding: 0;
   }
   .product-pricing__row strong {
-    font-size: 32px;
+    font-size: 26px;
   }
   .product-description {
     margin-top: 0;

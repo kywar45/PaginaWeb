@@ -4,6 +4,11 @@
       <PageBreadcrumbs title="Productos nuevos" />
       <h1 class="sr-only">Productos nuevos</h1>
 
+      <p v-if="products.length" class="products-page__results" aria-live="polite">
+        Total: {{ products.length.toLocaleString('es-MX') }} productos
+        <span v-if="pageCount > 1"> · Página {{ page }} de {{ pageCount }}</span>
+      </p>
+
       <div class="products-page__grid">
         <article
           v-for="product in pagedProducts"
@@ -34,16 +39,10 @@
         </article>
       </div>
       <div v-if="products.length" class="products-page__pagination">
-        <p>
-          {{ (page - 1) * pageSize + 1 }}–{{ Math.min(page * pageSize, products.length) }} de
-          {{ products.length }} productos
-        </p>
-        <q-pagination
+        <StorePagination
           v-if="pageCount > 1"
           :model-value="page"
           :max="pageCount"
-          direction-links
-          color="primary"
           aria-label="Páginas de productos nuevos"
           @update:model-value="changePage"
         />
@@ -55,6 +54,7 @@
 </template>
 
 <script setup>
+import StorePagination from 'src/components/StorePagination.vue'
 import { useProductNavigation } from 'src/services/productNavigation'
 const openProduct = useProductNavigation()
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
@@ -112,6 +112,7 @@ function useFallbackImage(event) {
 
 <style scoped lang="scss">
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.products-page__results { margin: 0 0 16px; color: #88717d; font-size: 12px; }
 .products-page__pagination {
   display: flex;
   flex-direction: column;

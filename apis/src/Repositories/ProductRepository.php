@@ -74,6 +74,57 @@ class ProductRepository
         return $stmt->fetchAll();
     }
 
+    public function bestSellers($onlyAvailable = false, $subcategoryId = null, $categoryId = null)
+    {
+        $where = 'p.active = 1';
+        if ($onlyAvailable) $where .= ' AND p.estatus = 1';
+        if ($subcategoryId !== null) $where .= ' AND p.sub_categoria = :subcategory_id';
+        if ($categoryId !== null) $where .= ' AND EXISTS (SELECT 1 FROM admin_subcategorias s
+            WHERE s.id_subcategoria = p.sub_categoria AND s.id_categoria = :category_id)';
+        $stmt = $this->pdo->prepare("SELECT p.*, i.a AS imagen, ventas.total_vendido
+            FROM (
+                SELECT id_producto, SUM(cantidad) AS total_vendido
+                FROM registro_usuario
+                WHERE estatus = 'Pagado'
+                  AND fecha_procesado >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+                  AND fecha_procesado <= NOW()
+                GROUP BY id_producto
+            ) ventas
+            INNER JOIN productos p ON p.id = ventas.id_producto
+            LEFT JOIN img i ON i.id_producto = p.id AND i.posicion = 1
+            WHERE " . $where . '
+            ORDER BY ventas.total_vendido DESC, p.id ASC
+            LIMIT 30');
+        if ($subcategoryId !== null) $stmt->bindValue(':subcategory_id', $subcategoryId, \PDO::PARAM_INT);
+        if ($categoryId !== null) $stmt->bindValue(':category_id', $categoryId, \PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public function countBrand($brandId, $onlyAvailable = false)
+    {
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM productos p
+            INNER JOIN web_marcas m ON m.id = p.marca AND m.estatus = 1
+            WHERE p.active = 1 AND p.marca = :brand_id' . ($onlyAvailable ? ' AND p.estatus = 1' : ''));
+        $stmt->bindValue(':brand_id', $brandId, \PDO::PARAM_INT);
+        $stmt->execute();
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function brandPage($brandId, $limit, $offset, $onlyAvailable = false)
+    {
+        $stmt = $this->pdo->prepare('SELECT p.*, i.a AS imagen FROM productos p
+            INNER JOIN web_marcas m ON m.id = p.marca AND m.estatus = 1
+            LEFT JOIN img i ON i.id_producto = p.id AND i.posicion = 1
+            WHERE p.active = 1 AND p.marca = :brand_id' . ($onlyAvailable ? ' AND p.estatus = 1' : '') . '
+            ORDER BY p.estatus DESC, p.nombre ASC, p.id ASC LIMIT :limit OFFSET :offset');
+        $stmt->bindValue(':brand_id', $brandId, \PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
     public function findProduct($id)
     {
         $stmt = $this->pdo->prepare('SELECT p.*, i.a AS imagen,
@@ -87,6 +138,67 @@ class ProductRepository
         $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetch();
+    }
+
+    private function searchFilter($query, $onlyAvailable = false, $offersOnly = false)
+    {
+        $conditions = array('p.active = 1');
+        if ($onlyAvailable) $conditions[] = 'p.estatus = 1';
+        if ($offersOnly) $conditions[] = "LOWER(TRIM(COALESCE(p.descuento, ''))) = 'si' AND " . $this->searchMoney('p.descuento_general') . ' > 0';
+        $params = array();
+        foreach (explode(' ', $query) as $index => $term) {
+            $pattern = '%' . str_replace(array('!', '%', '_'), array('!!', '!%', '!_'), $term) . '%';
+            $conditions[] = "(CONCAT_WS(' ', p.nombre, p.codigo, p.barcode, p.descripcion) LIKE :text_$index ESCAPE '!'
+                OR EXISTS (SELECT 1 FROM admin_subcategorias s
+                    LEFT JOIN admin_categorias c ON c.id_categoria = s.id_categoria
+                    WHERE s.id_subcategoria = p.sub_categoria
+                    AND CONCAT_WS(' ', s.nombre_subcategoria, c.nombre_categoria) LIKE :category_$index ESCAPE '!'))";
+            $params[':text_' . $index] = $pattern;
+            $params[':category_' . $index] = $pattern;
+        }
+        return array(implode(' AND ', $conditions), $params);
+    }
+
+    public function countSearch($query, $onlyAvailable = false, $offersOnly = false)
+    {
+        list($where, $params) = $this->searchFilter($query, $onlyAvailable, $offersOnly);
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM productos p WHERE ' . $where);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
+    private function searchMoney($column)
+    {
+        return "CAST(REPLACE(REPLACE(COALESCE($column, 0), ',', ''), '$', '') AS DECIMAL(12,2))";
+    }
+
+    private function searchOrder($sort)
+    {
+        if ($sort === 'precio_asc' || $sort === 'precio_desc') {
+            $discount = $this->searchMoney('p.descuento_general');
+            $price = $this->searchMoney('p.preciou');
+            return "CASE WHEN LOWER(TRIM(COALESCE(p.descuento, ''))) = 'si' AND $discount > 0 THEN $discount ELSE $price END "
+                . ($sort === 'precio_asc' ? 'ASC' : 'DESC') . ', p.estatus DESC, p.id ASC';
+        }
+        if ($sort === 'recientes') return 'p.id DESC';
+        return 'p.estatus DESC, CASE WHEN p.codigo = :exact_code THEN 0 ELSE 1 END, p.nombre ASC, p.id ASC';
+    }
+
+    public function searchPage($query, $limit, $offset, $sort = 'relevancia', $onlyAvailable = false, $offersOnly = false)
+    {
+        list($where, $params) = $this->searchFilter($query, $onlyAvailable, $offersOnly);
+        $order = $this->searchOrder($sort);
+        $stmt = $this->pdo->prepare('SELECT p.*,
+            (SELECT i.a FROM img i WHERE i.id_producto = p.id ORDER BY i.posicion ASC, i.a ASC LIMIT 1) AS imagen
+            FROM productos p WHERE ' . $where . '
+            ORDER BY ' . $order . '
+            LIMIT :limit OFFSET :offset');
+        foreach ($params as $key => $value) $stmt->bindValue($key, $value, \PDO::PARAM_STR);
+        if ($sort === 'relevancia') $stmt->bindValue(':exact_code', $query, \PDO::PARAM_STR);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
 
     public function productVariants($code)

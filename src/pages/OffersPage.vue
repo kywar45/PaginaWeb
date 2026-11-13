@@ -4,6 +4,11 @@
       <PageBreadcrumbs title="Ofertas del día" />
       <h1 class="sr-only">Ofertas del día</h1>
 
+      <p v-if="!loading && !errorMessage && pagination.total !== undefined" class="offers-page__results" aria-live="polite">
+        Total: {{ pagination.total.toLocaleString('es-MX') }} productos
+        <span v-if="pagination.total_pages > 1"> · Página {{ page }} de {{ pagination.total_pages }}</span>
+      </p>
+
       <div v-if="loading" class="q-pa-xl text-center" role="status">
         <q-spinner color="primary" size="36px" />
         <p>Cargando ofertas...</p>
@@ -37,18 +42,10 @@
         </article>
       </div>
       <div v-if="!loading && !errorMessage && products.length" class="offers-page__pagination">
-        <p v-if="pagination.total !== undefined">
-          {{ (page - 1) * pageSize + 1 }}–{{ (page - 1) * pageSize + products.length }} de
-          {{ pagination.total }} ofertas
-        </p>
-        <q-pagination
+        <StorePagination
           v-if="pagination.total_pages > 1"
           :model-value="page"
           :max="pagination.total_pages"
-          :max-pages="5"
-          direction-links
-          boundary-links
-          color="primary"
           aria-label="Páginas de ofertas"
           @update:model-value="changePage"
         />
@@ -70,6 +67,7 @@
 </template>
 
 <script setup>
+import StorePagination from 'src/components/StorePagination.vue'
 import { useProductNavigation } from 'src/services/productNavigation'
 const openProduct = useProductNavigation()
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
@@ -145,6 +143,7 @@ function useFallbackImage(event) {
 
 <style scoped lang="scss">
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.offers-page__results { margin: 0 0 16px; color: #88717d; font-size: 12px; }
 .offers-page__pagination {
   display: flex;
   flex-direction: column;

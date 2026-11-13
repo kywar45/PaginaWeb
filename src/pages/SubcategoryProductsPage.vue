@@ -61,14 +61,10 @@
             </article>
           </div>
           <div v-if="!loading && !errorMessage && products.length" class="offers-page__pagination">
-            <q-pagination
+            <StorePagination
               v-if="pagination.total_pages > 1"
               :model-value="page"
               :max="pagination.total_pages"
-              :max-pages="5"
-              direction-links
-              boundary-links
-              color="primary"
               aria-label="Páginas de productos"
               @update:model-value="changePage"
             />
@@ -92,6 +88,7 @@
 </template>
 
 <script setup>
+import StorePagination from 'src/components/StorePagination.vue'
 import { useProductNavigation } from 'src/services/productNavigation'
 const openProduct = useProductNavigation()
 import CatalogSidebar from 'src/components/CatalogSidebar.vue'
