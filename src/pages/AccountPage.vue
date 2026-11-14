@@ -290,12 +290,6 @@ const accountSections = [
     description: 'Tus lugares de entrega',
   },
   {
-    id: 'beneficios',
-    label: 'Mis beneficios',
-    icon: 'workspace_premium',
-    description: 'Conoce los beneficios de tu cuenta',
-  },
-  {
     id: 'ayuda',
     label: 'Ayuda y contacto',
     icon: 'support_agent',

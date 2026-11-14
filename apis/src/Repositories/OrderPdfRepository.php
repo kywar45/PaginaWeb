@@ -22,9 +22,11 @@ class OrderPdfRepository
 
     public function itemsForOrder($reference, $userId)
     {
-        $stmt = $this->pdo->prepare('SELECT id, id_usuario, id_producto, nombre, codigo, precio, cantidad, orden
-            FROM registro_usuario WHERE orden = :reference AND id_usuario = :user_id
-            ORDER BY codigo ASC, nombre ASC, id ASC');
+        $stmt = $this->pdo->prepare('SELECT r.id, r.id_usuario, r.id_producto, r.nombre, r.codigo, r.precio, r.cantidad, r.orden,
+            p.preciou AS precio_normal
+            FROM registro_usuario r LEFT JOIN productos p ON p.id = r.id_producto
+            WHERE r.orden = :reference AND r.id_usuario = :user_id
+            ORDER BY r.codigo ASC, r.nombre ASC, r.id ASC');
         $stmt->bindValue(':reference', $reference, \PDO::PARAM_STR);
         $stmt->bindValue(':user_id', $userId, \PDO::PARAM_INT);
         $stmt->execute();

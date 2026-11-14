@@ -128,14 +128,21 @@ class OrderPdf extends \FPDF
 
     private function headerLayout()
     {
-        $name = $this->wrap('Cliente: ' . $this->order['cliente'], 64, 7.4, 'B');
-        $email = empty($this->order['correo']) ? array() : $this->wrap($this->order['correo'], 64, 6.6);
-        $status = empty($this->order['estatus']) ? array() : $this->wrap('Estado: ' . $this->order['estatus'], 64, 6.6);
-        $reference = $this->wrap('Orden: ' . ($this->order['orden'] ?: $this->order['id']), 59, 8, 'B');
-        $method = $this->wrap($this->order['entrega_tipo'], 59, 6.7);
-        $carrier = $this->wrap($this->order['transportista'] ?: 'Método por confirmar', 59, 7, 'B');
-        $this->bodyTop = 15 + max(21, (count($name) + count($email) + count($status) + 1) * 3.2, (count($reference) + count($method) + count($carrier) + 1) * 3.2);
-        return array($name, $email, $status, $reference, $method, $carrier);
+        $carrier = trim((string) $this->order['transportista']);
+        $fields = array(
+            array('Cliente:', $this->order['cliente'], 54),
+            array('Orden:', $this->order['orden'] ?: $this->order['id'], 34),
+            array('Fecha Pedido:', $this->dateText($this->order['fecha']), 45),
+            array('Método de entrega:', $this->order['entrega_tipo'] . ($carrier !== '' ? ' - ' . $carrier : ''), 65),
+        );
+        $maxLines = 1;
+        foreach ($fields as &$field) {
+            $field[3] = $this->wrap($field[1], $field[2] - 12, 7);
+            $maxLines = max($maxLines, count($field[3]));
+        }
+        unset($field);
+        $this->bodyTop = max(36, 30 + $maxLines * 3.2);
+        return $fields;
     }
 
     protected function headerImagePath()
@@ -164,21 +171,91 @@ class OrderPdf extends \FPDF
 
     public function Header()
     {
-        list($name, $email, $status, $reference, $method, $carrier) = $this->headerLayout();
+        $fields = $this->headerLayout();
         $this->headerBackground($this->bodyTop - 3);
         $white = array(255, 255, 255);
-        $softWhite = array(255, 239, 245);
-        if (is_file($this->logo)) $this->Image($this->logo, 81, 11.5, 48, 0, 'PNG');
-        else $this->label(81, 15, 'SUPERNOVA', 12, 'B', array(255, 255, 255));
-        $this->label(78, 26, 'De todo para ti a precios para ti.', 6.1, '', $softWhite, 54, 'C');
-        $y = $this->lines(10, 10, $name, 7.4, 'B', $white);
-        $y = $this->lines(10, $y, $email, 6.6, '', $softWhite);
-        $y = $this->lines(10, $y, $status, 6.6, '', $softWhite);
-        $this->label(10, $y, $this->order['pagado'] ? 'Pago registrado' : 'Sin pago registrado', 6.6, 'B', $white);
-        $y = $this->lines(141, 10, $reference, 8, 'B', $white, 3.2, 59, 'R');
-        $this->label(141, $y, $this->dateText($this->order['fecha']), 6.7, '', $softWhite, 59, 'R');
-        $y = $this->lines(141, $y + 3.2, $method, 6.7, '', $softWhite, 3.2, 59, 'R');
-        $this->lines(141, $y, $carrier, 7, 'B', $white, 3.2, 59, 'R');
+        if (is_file($this->logo)) $this->Image($this->logo, 84, 1.5, 42, 0, 'PNG');
+        else $this->label(80, 5, 'SUPERNOVA', 12, 'B', $white, 50, 'C');
+        $this->label(65, 12, 'De todo para ti a precios para ti.', 7, 'I', $white, 80, 'C');
+        $this->SetDrawColor(255, 215, 229);
+        $this->SetLineWidth(.4);
+        $this->Line(40, 8, 72, 8);
+        $this->Line(138, 8, 170, 8);
+        $panelY = 18;
+        $panelHeight = $this->bodyTop - 25;
+        $this->roundedPanel(6, $panelY, 198, $panelHeight, 2.5);
+        $x = 6;
+        foreach ($fields as $index => $field) {
+            if ($index > 0) {
+                $this->SetDrawColor(245, 164, 190);
+                $this->SetLineWidth(.3);
+                $this->Line($x, $panelY + 2.5, $x, $panelY + $panelHeight - 2.5);
+            }
+            $this->headerIcon($index, $x + 3, $panelY + 2);
+            $this->label($x + 10, $panelY + 1, $field[0], 7.1, 'B');
+            $this->lines($x + 10, $panelY + 4.4, $field[3], 7, '', $this->muted);
+            $x += $field[2];
+        }
+    }
+
+    private function roundedPanel($x, $y, $w, $h, $r, $fill = array(255, 255, 255), $border = false, $clip = false)
+    {
+        $this->SetFillColor(...$fill);
+        $k = $this->k;
+        $pageHeight = $this->h;
+        $point = function ($px, $py) use ($k, $pageHeight) { return sprintf('%.2F %.2F', $px * $k, ($pageHeight - $py) * $k); };
+        $c = $r * .55228475;
+        $this->_out($point($x + $r, $y) . ' m ' . $point($x + $w - $r, $y) . ' l');
+        $this->_out($point($x + $w - $r + $c, $y) . ' ' . $point($x + $w, $y + $r - $c) . ' ' . $point($x + $w, $y + $r) . ' c');
+        $this->_out($point($x + $w, $y + $h - $r) . ' l ' . $point($x + $w, $y + $h - $r + $c) . ' ' . $point($x + $w - $r + $c, $y + $h) . ' ' . $point($x + $w - $r, $y + $h) . ' c');
+        $this->_out($point($x + $r, $y + $h) . ' l ' . $point($x + $r - $c, $y + $h) . ' ' . $point($x, $y + $h - $r + $c) . ' ' . $point($x, $y + $h - $r) . ' c');
+        $this->_out($point($x, $y + $r) . ' l ' . $point($x, $y + $r - $c) . ' ' . $point($x + $r - $c, $y) . ' ' . $point($x + $r, $y) . ($clip ? ' c W n' : ($border ? ' c B' : ' c f')));
+    }
+
+    private function headerIcon($kind, $x, $y, $size = 5.5)
+    {
+        $this->SetDrawColor(...$this->pink);
+        $this->SetLineWidth(.42);
+        $this->_out('1 J 1 j');
+        // Consistent 24-unit outline icons, scaled to a compact 5.5 mm square.
+        $paths = array(
+            array(
+                array('M', 16, 7, 'C', 16, 9.21, 14.21, 11, 12, 11, 'C', 9.79, 11, 8, 9.21, 8, 7, 'C', 8, 4.79, 9.79, 3, 12, 3, 'C', 14.21, 3, 16, 4.79, 16, 7, 'Z'),
+                array('M', 4, 21, 'L', 4, 19, 'C', 4, 15.69, 7.58, 14, 12, 14, 'C', 16.42, 14, 20, 15.69, 20, 19, 'L', 20, 21, 'Z'),
+            ),
+            array(
+                array('M', 12, 3, 'L', 21, 7.5, 'L', 21, 16.5, 'L', 12, 21, 'L', 3, 16.5, 'L', 3, 7.5, 'Z'),
+                array('M', 3, 7.5, 'L', 12, 12, 'L', 21, 7.5, 'M', 12, 12, 'L', 12, 21, 'M', 7.5, 5.25, 'L', 16.5, 9.75, 'L', 16.5, 13.5),
+            ),
+            array(
+                array('M', 5, 5, 'L', 19, 5, 'C', 20.1, 5, 21, 5.9, 21, 7, 'L', 21, 19, 'C', 21, 20.1, 20.1, 21, 19, 21, 'L', 5, 21, 'C', 3.9, 21, 3, 20.1, 3, 19, 'L', 3, 7, 'C', 3, 5.9, 3.9, 5, 5, 5, 'Z'),
+                array('M', 7, 3, 'L', 7, 7, 'M', 17, 3, 'L', 17, 7, 'M', 3, 10, 'L', 21, 10, 'M', 7, 14, 'L', 9, 14, 'M', 14, 14, 'L', 16, 14, 'M', 7, 17, 'L', 9, 17, 'M', 14, 17, 'L', 16, 17),
+            ),
+            array(
+                array('M', 3, 17, 'L', 2, 17, 'L', 2, 5, 'L', 14, 5, 'L', 14, 17, 'L', 9, 17, 'M', 14, 9, 'L', 18, 9, 'L', 22, 13, 'L', 22, 17, 'L', 21, 17, 'M', 14, 17, 'L', 15, 17, 'M', 14, 13, 'L', 22, 13),
+                array('M', 9, 17, 'C', 9, 18.66, 7.66, 20, 6, 20, 'C', 4.34, 20, 3, 18.66, 3, 17, 'C', 3, 15.34, 4.34, 14, 6, 14, 'C', 7.66, 14, 9, 15.34, 9, 17, 'Z'),
+                array('M', 21, 17, 'C', 21, 18.66, 19.66, 20, 18, 20, 'C', 16.34, 20, 15, 18.66, 15, 17, 'C', 15, 15.34, 16.34, 14, 18, 14, 'C', 19.66, 14, 21, 15.34, 21, 17, 'Z'),
+            ),
+        );
+        $paths[4] = array(
+            array('M', 3, 5, 'C', 3, 3.9, 3.9, 3, 5, 3, 'L', 12, 3, 'C', 12.53, 3, 13.04, 3.21, 13.41, 3.59, 'L', 21, 11.17, 'C', 21.78, 11.95, 21.78, 13.22, 21, 14, 'L', 14, 21, 'C', 13.22, 21.78, 11.95, 21.78, 11.17, 21, 'L', 3.59, 13.41, 'C', 3.21, 13.04, 3, 12.53, 3, 12, 'Z'),
+            array('M', 9, 7.5, 'C', 9, 8.33, 8.33, 9, 7.5, 9, 'C', 6.67, 9, 6, 8.33, 6, 7.5, 'C', 6, 6.67, 6.67, 6, 7.5, 6, 'C', 8.33, 6, 9, 6.67, 9, 7.5, 'Z'),
+        );
+        foreach ($paths[$kind] as $path) {
+            $commands = array();
+            for ($i = 0; $i < count($path);) {
+                $operation = $path[$i++];
+                $pairs = $operation === 'C' ? 3 : ($operation === 'Z' ? 0 : 1);
+                for ($j = 0; $j < $pairs; $j++) {
+                    $px = $x + $path[$i++] * $size / 24;
+                    $py = $y + $path[$i++] * $size / 24;
+                    $commands[] = sprintf('%.2F %.2F', $px * $this->k, ($this->h - $py) * $this->k);
+                }
+                $commands[] = $operation === 'Z' ? 'h' : strtolower($operation);
+            }
+            $this->_out(implode(' ', $commands) . ' S');
+        }
+        $this->_out('0 J 0 j');
     }
 
     public function Footer()
@@ -199,7 +276,7 @@ class OrderPdf extends \FPDF
 
     private function totalHeight($mixed)
     {
-        return 9 + (!empty($this->order['redondeo_centavos']) ? 4 : 0) + ($this->order['ajustes_centavos'] !== 0 ? 4 : 0) + ($mixed ? 4 : 0);
+        return 22 + (!empty($this->order['ahorro_centavos']) ? 6 : 0) + (!empty($this->order['redondeo_centavos']) ? 4 : 0) + ($this->order['ajustes_centavos'] !== 0 ? 4 : 0) + ($mixed ? 4 : 0);
     }
 
     private function mainPages(array $items, $mixed)
@@ -335,7 +412,7 @@ class OrderPdf extends \FPDF
     private function totals($y, $mixed)
     {
         $y += 2;
-        $end = 10 + $this->mainWidth;
+        $end = 200;
         $rounding = isset($this->order['redondeo_centavos']) ? $this->order['redondeo_centavos'] : 0;
         if ($rounding !== 0 || $this->order['ajustes_centavos'] !== 0) {
             $this->label(11, $y, 'Productos: ' . $this->money($this->order['subtotal_centavos'] - $rounding), 6.2, '', $this->muted);
@@ -345,11 +422,49 @@ class OrderPdf extends \FPDF
             $this->fitLabel($end - 78, $y, implode(' · ', $right), 77, 6.2, '', 'R', $this->muted);
             $y += 4;
         }
-        $this->SetFillColor(253, 232, 239);
-        $this->Rect(10, $y, $this->mainWidth, 6.5, 'F');
-        $this->label(11, $y + 1.4, 'Total de piezas: ' . $this->order['piezas'], 6.7, 'B');
-        $this->fitLabel(10 + $this->mainWidth * .45, $y + 1.4, 'Total del pedido: ' . $this->money($this->order['total_centavos']), $this->mainWidth * .55 - 1, 8, 'B', 'R', $this->pink);
-        if ($mixed) $this->label(11, $y + 7.5, '* Varios precios unitarios: consulta cada variante en el desglose lateral.', 6, '', $this->muted);
+        $savings = $this->order['ahorro_centavos'] ?? 0;
+        $width = 88;
+        $x = 10;
+        $end = $x + $width;
+        $totalY = $y + ($savings > 0 ? 13 : 7);
+        $white = array(255, 255, 255);
+        $this->SetDrawColor(219, 216, 220);
+        $this->SetLineWidth(.2);
+        $this->roundedPanel($x, $y, $width, $totalY - $y + 7, 2, $white, true);
+        $this->headerIcon(1, $x + 3.5, $y + 1.5, 4.2);
+        $this->SetDrawColor(...$this->pink);
+        $this->Line($x + 10, $y + 1.5, $x + 10, $y + 5.8);
+        $this->label($x + 12, $y + 2, 'RESUMEN DEL PEDIDO', 7.4, 'B');
+        $this->fitLabel($x + 47, $y + 2, 'Productos: ' . count($this->order['productos']), 21, 6.5, 'B', 'L', $this->muted);
+        $this->fitLabel($x + 70, $y + 2, 'Piezas: ' . $this->order['piezas'], 15, 6.5, 'B', 'L', $this->muted);
+        $this->SetDrawColor(224, 219, 223);
+        $this->Line($x + 68, $y + 2, $x + 68, $y + 5);
+        $this->Line($x + 4, $y + 6.5, $end - 4, $y + 6.5);
+        if ($savings > 0) {
+            $this->headerIcon(4, $x + 3.5, $y + 7.6, 4.2);
+            $this->label($x + 11, $y + 8.2, 'Tu ahorro', 8, 'B', $this->pink);
+            $this->fitLabel($x + 44, $y + 8.2, $this->money($savings), 40, 9.5, 'B', 'R', $this->pink);
+        }
+        $this->roundedPanel($x, $totalY, $width, 7, 2, $this->pink);
+        $this->SetFillColor(...$this->pink);
+        $this->Rect($x, $totalY, $width, 2, 'F');
+        $background = $this->headerImagePath();
+        if (is_file($background) && is_readable($background)) {
+            $this->_out('q');
+            $this->roundedPanel($x, $y, $width, $totalY - $y + 7, 2, $white, false, true);
+            try {
+                $this->Image($background, $x, $totalY, $width, 7, 'PNG');
+            } catch (\Exception $error) {
+                error_log('OrderPdf: total background could not be decoded; using solid pink.');
+            }
+            $this->_out('Q');
+        }
+        // Keep FPDF's tracked fill color in sync after restoring the PDF graphics state.
+        $this->SetFillColor(...$this->pink);
+        $this->label($x + 4, $totalY + 1.8, 'TOTAL A PAGAR:', 9, 'B', $white);
+        $this->fitLabel($x + 37, $totalY + 1.8, $this->money($this->order['total_centavos']), $width - 41, 12, 'B', 'R', $white);
+        $noteY = $totalY + 8;
+        if ($mixed) $this->label(11, $noteY, '* Varios precios unitarios: consulta cada variante en el desglose lateral.', 6, '', $this->muted);
     }
 
     public function render()
@@ -375,9 +490,21 @@ class OrderPdf extends \FPDF
                 $y = $this->bodyTop + 6;
                 foreach ($main[$page]['rows'] as $row) { $this->drawMainRow($row, $y); $y += $row['height']; }
                 if (!$display['main']) { $this->label(11, $y + 1, 'Sin productos registrados.', 7); $y += 6; }
-                if ($page === count($main) - 1) $this->totals($y, $mixed);
             } else $this->label(11, $this->bodyTop, 'Continuación del desglose de variantes', 8, 'B', $this->muted);
             foreach ($sides as $column => $pages) if (isset($pages[$page])) $this->drawSidebar($pages[$page], 10 + $this->mainWidth + 3 + $column * 33);
+            if ($page === $pageCount - 1) {
+                $summaryY = isset($main[$page]) ? max($y, $main[$page]['end']) : $this->bodyTop;
+                foreach ($sides as $pages) {
+                    foreach ($pages[$page] ?? array() as $segment) {
+                        $summaryY = max($summaryY, $segment['footerY'] + 7);
+                    }
+                }
+                if ($summaryY + $this->totalHeight($mixed) > $this->bottom) {
+                    $this->AddPage();
+                    $summaryY = $this->bodyTop;
+                }
+                $this->totals($summaryY, $mixed);
+            }
         }
         return $this->Output('S');
     }

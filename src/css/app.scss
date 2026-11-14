@@ -569,18 +569,34 @@ body {
   position: absolute;
   inset: 0;
   content: '';
-  background: linear-gradient(100deg, transparent 15%, rgba(255, 255, 255, 0.8) 50%, transparent 85%);
+  background: linear-gradient(
+    100deg,
+    transparent 15%,
+    rgba(255, 255, 255, 0.8) 50%,
+    transparent 85%
+  );
   transform: translateX(-100%);
   animation: sn-image-shimmer 1.4s ease-in-out infinite;
 }
 @keyframes sn-image-shimmer {
-  to { transform: translateX(100%); }
+  to {
+    transform: translateX(100%);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sn-image-skeleton::after { animation: none; }
-  .q-skeleton::before, .q-skeleton::after { animation: none !important; }
+  .sn-image-skeleton::after {
+    animation: none;
+  }
+  .q-skeleton::before,
+  .q-skeleton::after {
+    animation: none !important;
+  }
 }
-.home-load-error { padding: 18px 12px; text-align: center; color: #8c6c7b; }
+.home-load-error {
+  padding: 18px 12px;
+  text-align: center;
+  color: #8c6c7b;
+}
 
 // --- Product Card ----------------------------------------------
 .sn-product-card {
@@ -646,14 +662,6 @@ body {
 .sn-badge--kit {
   background: linear-gradient(90deg, #9c27b0, #673ab7);
   color: #fff;
-}
-
-.sn-wishlist-btn {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: blur(4px);
 }
 
 .sn-price-original {
@@ -2317,7 +2325,7 @@ body,
   flex: 0 0 150px !important;
   color: #fff !important;
   font-family: 'Brush Script MT', 'Segoe Script', cursive !important;
-  font-size: 17px !important;
+  font-size: 19px !important;
   font-style: italic;
   font-weight: 400;
   line-height: 1.08 !important;
@@ -2644,7 +2652,9 @@ body,
     padding: 5px 0;
     border-radius: 19px;
     color: #847780 !important;
-    transition: background-color 180ms ease, color 180ms ease;
+    transition:
+      background-color 180ms ease,
+      color 180ms ease;
   }
 
   .sn-mobile-nav .q-tabs__content > .q-tab--active {
@@ -2800,13 +2810,43 @@ body,
     font-size: 13px;
   }
 
-  .sn-mobile-head {
+  .sn-mobile-head,
+  .sn-drawer-header {
     background:
-      linear-gradient(158deg, transparent 0 17%, rgba(255, 255, 255, 0.08) 17.4% 20.4%, transparent 20.8% 34%, rgba(255, 255, 255, 0.06) 34.4% 37%, transparent 37.4%),
-      linear-gradient(20deg, transparent 0 70%, rgba(255, 255, 255, 0.07) 70.4% 73.5%, transparent 74%),
-      radial-gradient(110% 72% at -2% 10%, transparent 63%, rgba(255, 255, 255, 0.14) 64%, rgba(255, 255, 255, 0.035) 66%, transparent 68%),
-      radial-gradient(115% 76% at 103% 94%, transparent 60%, rgba(255, 255, 255, 0.12) 61%, rgba(255, 255, 255, 0.03) 63%, transparent 65%),
-      radial-gradient(ellipse 100% 130% at 47% -20%, rgba(255, 126, 155, 0.68), rgba(255, 90, 131, 0.25) 43%, transparent 70%),
+      linear-gradient(
+        158deg,
+        transparent 0 17%,
+        rgba(255, 255, 255, 0.08) 17.4% 20.4%,
+        transparent 20.8% 34%,
+        rgba(255, 255, 255, 0.06) 34.4% 37%,
+        transparent 37.4%
+      ),
+      linear-gradient(
+        20deg,
+        transparent 0 70%,
+        rgba(255, 255, 255, 0.07) 70.4% 73.5%,
+        transparent 74%
+      ),
+      radial-gradient(
+        110% 72% at -2% 10%,
+        transparent 63%,
+        rgba(255, 255, 255, 0.14) 64%,
+        rgba(255, 255, 255, 0.035) 66%,
+        transparent 68%
+      ),
+      radial-gradient(
+        115% 76% at 103% 94%,
+        transparent 60%,
+        rgba(255, 255, 255, 0.12) 61%,
+        rgba(255, 255, 255, 0.03) 63%,
+        transparent 65%
+      ),
+      radial-gradient(
+        ellipse 100% 130% at 47% -20%,
+        rgba(255, 126, 155, 0.68),
+        rgba(255, 90, 131, 0.25) 43%,
+        transparent 70%
+      ),
       linear-gradient(112deg, #ff527c 0%, #f43f6f 52%, #df2f61 100%) !important;
     border-bottom: 0 !important;
   }

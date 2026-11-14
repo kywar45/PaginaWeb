@@ -15,12 +15,6 @@ class OrderPdfService
         return trim(html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
     }
 
-    private function cents($value)
-    {
-        $number = preg_replace('/[^0-9.\-]/', '', (string) $value);
-        return is_numeric($number) && is_finite((float) $number) ? (int) round((float) $number * 100) : null;
-    }
-
     private function priceUnits($value)
     {
         if (!preg_match('/^([0-9]{1,6})(?:\.([0-9]{1,4}))?$/D', trim((string) $value), $parts)) return null;
@@ -40,6 +34,7 @@ class OrderPdfService
         $subtotalUnits = 0;
         $displaySubtotal = 0;
         $pieces = 0;
+        $savings = 0;
         foreach ($rows as $row) {
             $quantity = filter_var($row['cantidad'], FILTER_VALIDATE_INT, array('options' => array('min_range' => 0)));
             $price = $this->priceUnits($row['precio']);
@@ -47,6 +42,14 @@ class OrderPdfService
                 throw new ApiException('ORDER_DATA_INVALID', 'No pudimos preparar los importes de este pedido. Comunicate con Supernova.', 409);
             }
             $amount = $quantity * $price;
+            $normal = $this->priceUnits(preg_replace('/[^0-9.\-]/', '', (string) ($row['precio_normal'] ?? '')));
+            if ($normal !== null) {
+                $difference = max(0, intdiv($normal + 50, 100) - intdiv($price + 50, 100));
+                if ($difference > 0 && $quantity > intdiv(PHP_INT_MAX - $savings, $difference)) {
+                    throw new ApiException('ORDER_DATA_INVALID', 'Importe de ahorro fuera de rango.', 409);
+                }
+                $savings += $difference * $quantity;
+            }
             if ($amount > PHP_INT_MAX - 50 - $subtotalUnits) throw new ApiException('ORDER_DATA_INVALID', 'Importe de pedido fuera de rango.', 409);
             $items[] = array('codigo' => $this->clean($row['codigo']), 'nombre' => $this->clean($row['nombre']),
                 'cantidad' => $quantity, 'precio_unidades' => $price, 'precio_centavos' => intdiv($price + 50, 100), 'importe_centavos' => intdiv($amount + 50, 100));
@@ -55,8 +58,8 @@ class OrderPdfService
             $pieces += $quantity;
         }
         $subtotal = intdiv($subtotalUnits + 50, 100);
-        $total = $this->cents($order['total']);
-        if ($total === null) $total = $subtotal;
+        // Historical line amounts are authoritative; round only after summing.
+        $total = $subtotal;
         $paidDate = trim((string) $order['fecha_pago']);
         return array('id' => (int) $order['id'], 'orden' => $reference, 'fecha' => $order['fecha'],
             'cliente' => $this->clean($order['nombres']) ?: 'Cliente sin registrar',
@@ -67,6 +70,7 @@ class OrderPdfService
             'pagado' => $paidDate !== '' && substr($paidDate, 0, 10) !== '0000-00-00',
             'estatus' => $this->clean($order['estatus']), 'productos' => $items, 'piezas' => $pieces,
             'subtotal_centavos' => $subtotal, 'redondeo_centavos' => $subtotal - $displaySubtotal,
+            'ahorro_centavos' => $savings,
             'ajustes_centavos' => $total - $subtotal, 'total_centavos' => $total);
     }
 }

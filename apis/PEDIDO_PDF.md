@@ -108,8 +108,13 @@ Publicar también el frontend de `dist/spa`. No necesita cambios de esquema.
 - El documento se identifica por `folios.id` y comprueba `folios.id_usuario`
   contra la sesión, antes de leer las líneas del pedido.
 - Los productos históricos salen de `registro_usuario`, enlazados
-  por `orden` e `id_usuario`. No consulta precios actuales de
-  `productos` ni recalcula promociones, VIP o mayoreo actuales.
+  por `orden` e `id_usuario`. El total suma `cantidad * precio`, redondeando
+  al final a centavos, sin usar `folios.total` ni recalcular promociones.
+  Para el ahorro se consulta `productos.preciou` por `id_producto` mediante
+  LEFT JOIN: suma `max(0, precio normal actual - precio vendido) * cantidad`,
+  con ambos precios redondeados a centavos como en el carrito. No modifica
+  el total vendido. Si falta el producto o su precio normal, no suma ahorro
+  en esa línea. El PDF aclara que la referencia es el precio normal actual.
 - Solo se usan estos ocho campos de `registro_usuario`: `id`, `id_usuario`,
   `id_producto`, `nombre`, `codigo`, `precio`, `cantidad`, `orden`. La dirección,
   teléfono y otros campos antiguos no se consultan. El cliente se identifica con

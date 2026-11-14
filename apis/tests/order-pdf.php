@@ -58,7 +58,7 @@ namespace {
     check(!$service->prepare(42, 23)['pagado'], 'Legacy zero date is not paid');
     $repo->header['fecha_pago'] = '2026-11-13 10:30:00';
     $repo->header['total'] = '700.00';
-    check($service->prepare(42, 23)['ajustes_centavos'] === 5000 && $service->prepare(42, 23)['pagado'], 'Saved total reconciles with historical items');
+    check($service->prepare(42, 23)['total_centavos'] === 65000 && $service->prepare(42, 23)['ajustes_centavos'] === 0 && $service->prepare(42, 23)['pagado'], 'Historical items determine the total even when folios.total differs');
     $before = $repo->itemCalls;
     foreach (array(array(42, 99), array(99, 23)) as $ids) {
         try { $service->prepare($ids[0], $ids[1]); throw new \RuntimeException('Expected missing order'); }
@@ -69,6 +69,28 @@ namespace {
     $decimal = $service->prepare(42, 23);
     check($decimal['subtotal_centavos'] === 100 && $decimal['redondeo_centavos'] === 1 && $decimal['productos'][0]['precio_unidades'] === 3333, 'All four historical decimals retained before final rounding');
     $repo->rows = $originalRows;
+    $repo->header['total'] = '388350.26';
+    $repo->rows = array(
+        array('codigo' => 'TEST', 'nombre' => 'Importe entero', 'cantidad' => '1', 'precio' => '388460.0000'),
+        array('codigo' => 'TEST-2', 'nombre' => 'Importe decimal', 'cantidad' => '7', 'precio' => '0.0375'),
+    );
+    $regression = $service->prepare(42, 23);
+    check($regression['total_centavos'] === 38846026 && $regression['ajustes_centavos'] === 0, '388460.2625 rounds to 388460.26 without subtracting the header difference');
+    $pdf = new \App\Pdf\OrderPdf($regression);
+    $pdf->SetCompression(false);
+    $bytes = $pdf->render();
+    check(strpos($bytes, '$388,460.26') !== false && strpos($bytes, '$388,350.26') === false, 'PDF renders the sum of historical line amounts');
+    $repo->rows = $originalRows;
+    $repo->rows[0]['precio_normal'] = '150.00';
+    $repo->rows[1]['precio_normal'] = '100.00';
+    $withSavings = $service->prepare(42, 23);
+    check($withSavings['ahorro_centavos'] === 10000 && $withSavings['total_centavos'] === 65000, 'Savings compare normal and sold prices per quantity, ignoring negative differences');
+    $pdf = new \App\Pdf\OrderPdf($withSavings);
+    $pdf->SetCompression(false);
+    $savingsBytes = $pdf->render();
+    check(strpos($savingsBytes, 'Tu ahorro') !== false && strpos($savingsBytes, 'Tu ahorro*') === false && strpos($savingsBytes, 'Frente al precio normal actual') === false && strpos($savingsBytes, '$100.00') !== false, 'PDF displays savings without changing the purchase total');
+    $repo->rows = $originalRows;
+    check($service->prepare(42, 23)['ahorro_centavos'] === 0, 'Missing reference prices do not invent savings');
     $auth = new PdfAuth();
     putenv('SESSION_COOKIE=sn_session');
     $_COOKIE = array('sn_session' => str_repeat('a', 64));

@@ -264,6 +264,7 @@
 </template>
 
 <script setup>
+import { mexicanStates as states } from 'src/utils/mexicanStates'
 import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { accountAddresses, changeAddress } from 'src/services/authApi'
 
@@ -279,40 +280,7 @@ const formOpen = ref(false)
 const editingDefault = ref(false)
 const removing = ref(null)
 const fields = ['nombre', 'apellido', 'colonia', 'ciudad', 'estado', 'cp', 'direccion', 'telefono']
-const states = [
-  'Aguascalientes',
-  'Baja California',
-  'Baja California Sur',
-  'Campeche',
-  'Chiapas',
-  'Chihuahua',
-  'Ciudad de México',
-  'Coahuila',
-  'Colima',
-  'Durango',
-  'Estado de México',
-  'Guanajuato',
-  'Guerrero',
-  'Hidalgo',
-  'Jalisco',
-  'Michoacán',
-  'Morelos',
-  'Nayarit',
-  'Nuevo León',
-  'Oaxaca',
-  'Puebla',
-  'Querétaro',
-  'Quintana Roo',
-  'San Luis Potosí',
-  'Sinaloa',
-  'Sonora',
-  'Tabasco',
-  'Tamaulipas',
-  'Tlaxcala',
-  'Veracruz',
-  'Yucatán',
-  'Zacatecas',
-]
+
 const normalizeState = (value) =>
   value
     .normalize('NFD')

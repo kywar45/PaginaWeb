@@ -37,6 +37,6 @@ function orderPdfFixture($long = false)
         'correo' => 'cliente-demostracion@example.com', 'entrega_tipo' => $long ? 'Entrega en punto' : 'Envío por paquetería',
         'transportista' => $long ? 'Punto de entrega Supernova Centro' : 'Paquetería de muestra',
         'pagado' => !$long, 'estatus' => $long ? 'Pendiente de pago' : 'En preparación',
-        'productos' => $items, 'piezas' => $pieces, 'subtotal_centavos' => $subtotal,
+        'productos' => $items, 'piezas' => $pieces, 'subtotal_centavos' => $subtotal, 'ahorro_centavos' => 12500,
         'ajustes_centavos' => $long ? 0 : 15000, 'total_centavos' => $subtotal + ($long ? 0 : 15000));
 }

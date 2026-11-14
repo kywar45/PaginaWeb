@@ -40,7 +40,6 @@
             <p class="order-card__date">
               <q-icon name="event" aria-hidden="true" />{{ formatDate(order.fecha) }}
             </p>
-            <span v-if="order.estatus" class="order-card__status">{{ order.estatus }}</span>
             <span class="order-card__pdf"
               ><q-icon name="picture_as_pdf" aria-hidden="true" /> Ver pedido en PDF
               <q-icon name="north_east" aria-hidden="true"
@@ -220,13 +219,6 @@ onBeforeUnmount(() => request?.abort())
   margin: 0;
   color: #97808c;
   font-size: 11px;
-}
-.order-card__status {
-  display: block;
-  margin-top: 6px;
-  color: #88717d;
-  font-size: 11px;
-  overflow-wrap: anywhere;
 }
 .order-card__amount {
   display: flex;

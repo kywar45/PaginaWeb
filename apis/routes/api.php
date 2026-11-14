@@ -21,6 +21,12 @@ use App\Controllers\CartController;
 use App\Repositories\CartRepository;
 use App\Services\CartIdentity;
 use App\Services\CartService;
+use App\Controllers\ShippingCarrierController;
+use App\Repositories\ShippingCarrierRepository;
+use App\Services\ShippingCarrierService;
+use App\Controllers\GuestCustomerController;
+use App\Repositories\GuestCustomerRepository;
+use App\Services\GuestCustomerService;
 
 
 
@@ -59,6 +65,17 @@ use App\Services\BranchService;
 
 
 return function (Router $router): void {
+    $router->post('/v1/checkout/invitado', function (): void {
+        $pdo = Connection::get();
+        $auth = new AuthService($pdo, new UserRepository($pdo));
+        $controller = new GuestCustomerController(new GuestCustomerService(new GuestCustomerRepository($pdo), $auth));
+        $controller->register();
+    });
+    $router->get('/v1/metodos-entrega', function (): void {
+        $pdo = Connection::get();
+        $controller = new ShippingCarrierController(new ShippingCarrierService(new ShippingCarrierRepository($pdo)));
+        $controller->index();
+    });
 
     $cartController = function () {
         header('Cache-Control: private, no-store');

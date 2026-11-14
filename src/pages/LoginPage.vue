@@ -11,12 +11,11 @@
           <p class="login-brand__tagline">De todo para ti a precios para ti.</p>
           <h2>Tu cuenta Supernova, todo en un mismo lugar.</h2>
           <p class="login-brand__copy">
-            Consulta tus pedidos y mantén tus productos favoritos siempre a la mano.
+            Consulta tus pedidos y administra tus datos de entrega desde tu cuenta.
           </p>
 
           <ul class="login-brand__benefits">
             <li><q-icon name="inventory_2" /> Seguimiento de pedidos</li>
-            <li><q-icon name="favorite" /> Favoritos guardados</li>
             <li><q-icon name="local_offer" /> Ofertas para clientes</li>
           </ul>
         </div>

@@ -216,20 +216,6 @@
               @click="searchOpen = true"
             />
 
-            <!-- Acciones desktop -->
-            <div class="row items-center no-wrap q-gutter-xs gt-sm">
-              <q-btn
-                flat
-                round
-                icon="favorite_border"
-                color="dark"
-                size="md"
-                class="sn-header-icon-btn"
-              >
-                <q-tooltip>Lista de deseos</q-tooltip>
-              </q-btn>
-            </div>
-
             <!-- Carrito (siempre visible) -->
             <q-btn
               flat
@@ -346,31 +332,28 @@
 
 
     <!-- ════════════════════════════════ DRAWER MOBILE ══════════════════════════════ -->
-    <q-drawer v-model="leftDrawerOpen" bordered :width="290" class="lt-md">
+    <q-drawer v-model="leftDrawerOpen" behavior="mobile" bordered :width="290" class="lt-md">
       <!-- Cabecera del drawer -->
       <div class="sn-drawer-header">
-        <div class="row items-center justify-between q-mb-lg">
-          <div>
-            <div class="text-white font-playfair text-h6 text-weight-bold">SUPERNOVA</div>
-            <div class="text-caption" style="color: #f8bbd9; letter-spacing: 3px">
-              NAILS & BEAUTY
-            </div>
-          </div>
-          <q-btn flat round dense icon="close" color="white" @click="leftDrawerOpen = false" />
+        <div class="sn-drawer-brand">
+          <img v-image-skeleton :src="publicAsset('img/logob.png')" alt="Importadora Supernova" class="sn-drawer-brand__logo" />
+          <q-btn flat round dense icon="close" color="white" aria-label="Cerrar menú" @click="leftDrawerOpen = false" />
         </div>
+        <p class="sn-drawer-brand__motto">De todo para ti a precios para ti.</p>
 
         <!-- Avatar / usuario -->
-        <div class="row items-center cursor-pointer" @click="goToAccount">
-          <q-avatar color="white" size="42px">
+        <button type="button" class="sn-drawer-account" @click="goToAccount">
+          <q-avatar color="white" size="36px">
             <q-icon name="person" color="primary" size="sm" />
           </q-avatar>
-          <div class="q-ml-sm">
-            <div class="text-white text-weight-bold text-body2">{{ accountGreeting }}</div>
-            <div class="text-caption" style="color: #f8bbd9">
+          <span class="sn-drawer-account__copy">
+            <strong>{{ accountGreeting }}</strong>
+            <span>
               {{ currentUser ? 'Ir a mi panel' : 'Ingresa o registrate' }}
-            </div>
-          </div>
-        </div>
+            </span>
+          </span>
+          <q-icon name="chevron_right" size="20px" />
+        </button>
       </div>
 
       <!-- Categorías -->
@@ -454,39 +437,31 @@
 
         <q-separator class="q-my-sm" />
 
-        <q-item-label
-          header
-          class="text-weight-bold text-uppercase text-caption"
-          style="color: #c4516f"
-        >
-          Mi cuenta
-        </q-item-label>
-        <q-item clickable v-ripple @click="goToAccount">
-          <q-item-section avatar><q-icon name="person" color="pink-4" /></q-item-section>
-          <q-item-section>{{ currentUser ? 'Mi panel' : 'Ingresar' }}</q-item-section>
-        </q-item>
-        <q-item clickable v-ripple>
-          <q-item-section avatar><q-icon name="favorite" color="pink-4" /></q-item-section>
-          <q-item-section>Lista de deseos</q-item-section>
-        </q-item>
-        <q-item clickable v-ripple>
-          <q-item-section avatar><q-icon name="receipt_long" color="pink-4" /></q-item-section>
-          <q-item-section>Mis pedidos</q-item-section>
-        </q-item>
-        <q-item clickable v-ripple>
+        <q-item clickable v-ripple href="https://wa.me/525524954670" target="_blank" rel="noopener noreferrer" @click="leftDrawerOpen = false">
           <q-item-section avatar><q-icon name="headset_mic" color="pink-4" /></q-item-section>
-          <q-item-section>Contacto / Soporte</q-item-section>
+          <q-item-section>Contacto con soporte</q-item-section>
         </q-item>
       </q-list>
 
       <!-- Social -->
       <div class="q-pa-md q-mt-auto">
         <q-separator class="q-mb-md" />
-        <div class="text-caption text-grey q-mb-xs">Seguinos en</div>
+        <div class="text-caption text-grey q-mb-xs">Síguenos en</div>
         <div class="row q-gutter-sm">
-          <q-btn round flat icon="camera_alt" size="sm" />
-          <q-btn round flat icon="music_note" size="sm" />
-          <q-btn round flat icon="phone_iphone" size="sm" />
+          <q-btn
+            v-for="social in footerSocialLinks"
+            :key="social.name"
+            round
+            flat
+            :href="social.href"
+            target="_blank"
+            rel="noopener noreferrer"
+            :aria-label="social.name"
+            @click="leftDrawerOpen = false"
+          >
+            <img v-image-skeleton :src="social.image" alt="" width="26" height="26" style="object-fit: contain" />
+            <q-tooltip>{{ social.name }}</q-tooltip>
+          </q-btn>
         </div>
       </div>
     </q-drawer>
@@ -605,7 +580,6 @@
         >
           <q-tab name="home" icon="home" label="Inicio" @click="goToHome" />
           <q-tab name="search" icon="format_list_bulleted" label="Categorías" @click="goToCategories" />
-          <q-tab name="fav" icon="favorite_border" label="Favoritos" />
           <q-tab name="cart" icon="shopping_cart" label="Carrito" @click="router.push('/carrito')">
             <q-badge color="primary" floating rounded style="font-size: 10px">{{
               cartCount
@@ -750,8 +724,7 @@ watch(() => route.path, (path) => {
 }, { immediate: true })
 
 function goToCategories() {
-  leftDrawerOpen.value = false
-  router.push('/categorias')
+  leftDrawerOpen.value = true
 }
 
 function goToHome() {
@@ -812,10 +785,10 @@ const footerStores = [
 ]
 
 const footerSocialLinks = [
-  { name: 'Facebook', image: publicAsset('img/facebook.png'), href: '#' },
-  { name: 'Instagram', image: publicAsset('img/instagram.png'), href: '#' },
-  { name: 'TikTok', image: publicAsset('img/tiktok.png'), href: '#' },
-  { name: 'YouTube', image: publicAsset('img/youtube.png'), href: '#' },
+  { name: 'Facebook', image: publicAsset('img/facebook.png'), href: 'https://www.facebook.com/profile.php?id=61558081776009&ref=NONE_xav_ig_profile_page_web#' },
+  { name: 'Instagram', image: publicAsset('img/instagram.png'), href: 'https://www.instagram.com/lemussaoficial/?hl=es' },
+  { name: 'TikTok', image: publicAsset('img/tiktok.png'), href: 'https://www.tiktok.com/@supernovashopmx' },
+  { name: 'YouTube', image: publicAsset('img/youtube.png'), href: 'https://www.youtube.com/@lemussaoficial3601' },
 ]
 
 
@@ -836,7 +809,8 @@ function selectCategory(slug) {
   activeCategory.value = slug
   activeSubcategory.value = ''
   leftDrawerOpen.value = false
-  router.push({ path: '/', query: slug === 'all' ? {} : { category: slug } })
+  if (slug === 'all') router.push('/categorias')
+  else selectCategoryFromMenu(slug)
 }
 
 function selectCategoryFromMenu(slug) {
@@ -876,6 +850,59 @@ async function showOffers() {
 }
 </script>
 <style lang="scss">
+.sn-drawer-header {
+  padding: 18px 16px 16px;
+}
+.sn-drawer-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.sn-drawer-brand__logo {
+  display: block;
+  width: 172px;
+  height: 47px;
+  object-fit: contain;
+  object-position: left center;
+}
+.sn-drawer-brand__motto {
+  margin: 5px 0 14px;
+  color: #fff;
+  font-size: 10px;
+}
+.sn-drawer-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid #ffffff45;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sn-drawer-account__copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.sn-drawer-account__copy > span {
+  color: #fff;
+  font-size: 11px;
+  opacity: .85;
+}
+.sn-drawer-account:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
 @media (max-width: 1023px) {
   .sn-footer.sn-footer--keyboard { display: none !important; }
 }
