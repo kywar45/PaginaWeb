@@ -7,6 +7,9 @@ use App\Http\Response;
 use App\Http\Router;
 
 use App\Controllers\AuthController;
+use App\Controllers\OrderPdfController;
+use App\Repositories\OrderPdfRepository;
+use App\Services\OrderPdfService;
 use App\Controllers\BannerController;
 use App\Controllers\CategoryController;
 use App\Controllers\ProductController;
@@ -147,6 +150,48 @@ return function (Router $router): void {
         $controller = new AuthController($service);
 
         $controller->login();
+    });
+
+    $router->get('/v1/auth/pedido-pdf', function (): void {
+        $pdo = Connection::get();
+        $auth = new AuthService($pdo, new UserRepository($pdo));
+        $orders = new OrderPdfService(new OrderPdfRepository($pdo));
+        $controller = new OrderPdfController($auth, $orders);
+        $controller->show();
+    });
+
+    $router->get('/v1/auth/pedidos', function (): void {
+        header('Cache-Control: private, no-store');
+        $pdo = Connection::get();
+        $service = new AuthService($pdo, new UserRepository($pdo));
+        $controller = new AuthController($service);
+        $controller->orders();
+    });
+
+    $router->get('/v1/auth/direcciones', function (): void {
+        $pdo = Connection::get();
+        $auth = new AuthService($pdo, new UserRepository($pdo));
+        $repository = new \App\Repositories\AddressRepository($pdo);
+        $service = new \App\Services\AddressService($auth, $repository);
+        $controller = new \App\Controllers\AddressController($service);
+        $controller->index();
+    });
+
+    $router->post('/v1/auth/direcciones', function (): void {
+        $pdo = Connection::get();
+        $auth = new AuthService($pdo, new UserRepository($pdo));
+        $repository = new \App\Repositories\AddressRepository($pdo);
+        $service = new \App\Services\AddressService($auth, $repository);
+        $controller = new \App\Controllers\AddressController($service);
+        $controller->change();
+    });
+
+    $router->get('/v1/auth/resumen', function (): void {
+        header('Cache-Control: private, no-store');
+        $pdo = Connection::get();
+        $service = new AuthService($pdo, new UserRepository($pdo));
+        $controller = new AuthController($service);
+        $controller->summary();
     });
 
     $router->get('/v1/auth/me', function (): void {

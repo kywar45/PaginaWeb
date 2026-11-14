@@ -47,11 +47,12 @@
           @update:model-value="changePage"
         />
         <div v-else-if="pagination.total_pages === undefined" class="row q-gutter-sm">
-          <q-btn no-caps label="Anterior" :disable="page <= 1" @click="changePage(page - 1)" />
+          <q-btn no-caps icon="chevron_left" aria-label="Página anterior" :disable="page <= 1" @click="changePage(page - 1)" />
           <span class="self-center">Página {{ page }}</span>
           <q-btn
             no-caps
-            label="Siguiente"
+            icon="chevron_right"
+            aria-label="Página siguiente"
             :disable="!pagination.has_more"
             @click="changePage(page + 1)"
           />

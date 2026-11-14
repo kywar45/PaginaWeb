@@ -102,6 +102,50 @@ class AuthService
         );
     }
 
+    public function accountSummary()
+    {
+        $user = $this->sessionUserOrFail();
+        return array('pedidos_pagados' => $this->users->countPaidOrders((int) $user['id']));
+    }
+
+    public function accountOrders($page, $limit)
+    {
+        $user = $this->sessionUserOrFail();
+        $userId = (int) $user['id'];
+        $total = $this->users->countOrders($userId);
+        $items = array();
+        $links = new OrderPdfLink($this->sessionToken());
+        foreach ($this->users->ordersPage($userId, $limit, ($page - 1) * $limit) as $row) {
+            $paidDate = $this->orderDate($row['fecha_pago']);
+            $amount = preg_replace('/[^0-9.\-]/', '', (string) $row['total']);
+            $items[] = array('id' => (int) $row['id'], 'orden' => trim((string) $row['orden']),
+                'fecha' => $this->orderDate($row['fecha']), 'fecha_pago' => $paidDate,
+                'pagado' => $paidDate !== null,
+                'total' => is_numeric($amount) ? round((float) $amount, 2) : null,
+                'estatus' => trim((string) $row['estatus']),
+                'pdf_token' => $links->issue((int) $row['id'], $userId));
+        }
+        $hasMore = $page * $limit < $total;
+        return array('pedidos' => $items, 'pagination' => array(
+            'page' => $page, 'limit' => $limit, 'total' => $total,
+            'total_pages' => (int) ceil($total / $limit), 'has_more' => $hasMore,
+            'next_page' => $hasMore ? $page + 1 : null,
+        ));
+    }
+
+    public function resolveOrderPdfToken($token)
+    {
+        $user = $this->currentUser()['usuario'];
+        $links = new OrderPdfLink($this->sessionToken());
+        return array('id' => $links->resolve($token, (int) $user['id']), 'usuario' => $user);
+    }
+
+    private function orderDate($value)
+    {
+        $value = trim((string) $value);
+        return $value === '' || substr($value, 0, 10) === '0000-00-00' ? null : $value;
+    }
+
     public function optionalUser()
     {
         try {

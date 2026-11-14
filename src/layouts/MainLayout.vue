@@ -35,11 +35,21 @@
             dense
             placeholder="Buscar en Supernova"
             maxlength="80"
-            @keyup.enter="submitSearch"
+            @focus="focusedSearch = 'mobile'"
+            @click="openSearchSuggestions($event, 'mobile')"
+            @update:model-value="focusedSearch = 'mobile'"
+            @keydown="searchKeydown($event, mobileSuggestions)"
+            autocomplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-controls="mobile-search-options"
+            :aria-expanded="focusedSearch === 'mobile'"
+            :aria-activedescendant="mobileSuggestions?.activeDescendant"
             aria-label="Buscar productos"
             class="sn-mobile-head__search"
             bg-color="white"
           >
+            <StoreSearchSuggestions ref="mobileSuggestions" :query="searchQuery" :active="focusedSearch === 'mobile'" list-id="mobile-search-options" anchor-target=".sn-mobile-head__search" @search="submitSearch" @close="focusedSearch === 'mobile' && (focusedSearch = '')" @open="focusedSearch = 'mobile'" />
             <template #prepend>
               <q-btn flat round dense icon="search" aria-label="Buscar productos" @click="submitSearch" />
             </template>
@@ -88,12 +98,23 @@
               dense
               placeholder="Buscar productos..."
               maxlength="80"
-              @keyup.enter="submitSearch"
+              @focus="focusedSearch = 'expanded'"
+              @click="openSearchSuggestions($event, 'expanded')"
+              @update:model-value="focusedSearch = 'expanded'"
+              @keydown="searchKeydown($event, expandedSuggestions)"
+              autocomplete="off"
+              role="combobox"
+              aria-label="Buscar productos"
+              aria-autocomplete="list"
+              aria-controls="expanded-search-options"
+              :aria-expanded="focusedSearch === 'expanded'"
+              :aria-activedescendant="expandedSuggestions?.activeDescendant"
               class="lt-md sn-mobile-search"
               bg-color="white"
               style="flex: 1"
               autofocus
             >
+              <StoreSearchSuggestions ref="expandedSuggestions" :query="searchQuery" :active="focusedSearch === 'expanded'" list-id="expanded-search-options" anchor-target=".sn-mobile-search" @search="submitSearch" @close="focusedSearch === 'expanded' && (focusedSearch = '')" @open="focusedSearch = 'expanded'" />
               <template #append>
                 <q-btn
                   v-if="searchQuery"
@@ -143,11 +164,21 @@
               placeholder="Buscar productos, marcas y más..."
               maxlength="80"
               aria-label="Buscar productos"
-              @keyup.enter="submitSearch"
+              @focus="focusedSearch = 'desktop'"
+              @click="openSearchSuggestions($event, 'desktop')"
+              @update:model-value="focusedSearch = 'desktop'"
+              @keydown="searchKeydown($event, desktopSuggestions)"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="desktop-search-options"
+              :aria-expanded="focusedSearch === 'desktop'"
+              :aria-activedescendant="desktopSuggestions?.activeDescendant"
               class="sn-search gt-sm"
               bg-color="white"
               style="width: 100%; max-width: 680px"
             >
+              <StoreSearchSuggestions ref="desktopSuggestions" :query="searchQuery" :active="focusedSearch === 'desktop'" list-id="desktop-search-options" anchor-target=".sn-search" @search="submitSearch" @close="focusedSearch === 'desktop' && (focusedSearch = '')" @open="focusedSearch = 'desktop'" />
               <template #append>
                 <q-btn
                   v-if="searchQuery"
@@ -480,7 +511,7 @@
     </q-page-container>
 
     <!-- ══════════════════════════════════ FOOTER ════════════════════════════════════ -->
-    <q-footer bordered :elevated="false" class="sn-footer sn-footer--premium">
+    <q-footer bordered :elevated="false" class="sn-footer sn-footer--premium" :class="{ 'sn-footer--keyboard': keyboardVisible }">
       <!-- DESKTOP FOOTER -->
       <div class="sn-footer-desktop gt-sm">
         <div class="sn-footer-grid">
@@ -596,15 +627,25 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { catalogLocation } from 'src/utils/catalogRoutes'
 import StoreCategoryMenu from 'src/components/StoreCategoryMenu.vue'
+import StoreSearchSuggestions from 'src/components/StoreSearchSuggestions.vue'
+import { useSearchHistory } from 'src/services/searchHistory'
+import { normalizeSearch } from 'src/utils/searchHistory'
+import { useMobileKeyboard } from 'src/composables/useMobileKeyboard'
 import { getCategories } from 'src/services/categoryApi'
 import { useAuthSession } from 'src/services/authSession'
 
 const router = useRouter()
+const keyboardVisible = useMobileKeyboard()
 const { currentUser, sessionChecked, loadCurrentUser } = useAuthSession()
 
 const leftDrawerOpen = ref(false)
 const searchQuery = ref('')
 const searchOpen = ref(false)
+const focusedSearch = ref('')
+const mobileSuggestions = ref(null)
+const desktopSuggestions = ref(null)
+const expandedSuggestions = ref(null)
+const { remember: rememberSearch } = useSearchHistory()
 const activeCategory = ref('all')
 const activeSubcategory = ref('')
 const mobileTab = ref('home')
@@ -678,15 +719,28 @@ const route = useRoute()
 watch(() => route.query.q, (value) => {
   if (route.path === '/buscar') searchQuery.value = typeof value === 'string' ? value : ''
 }, { immediate: true })
-function submitSearch() {
-  const q = searchQuery.value.trim().replace(/\s+/g, ' ')
+function openSearchSuggestions(event, name) {
+  if (event.target.tagName === 'INPUT') focusedSearch.value = name
+}
+function searchKeydown(event, suggestions) {
+  if (suggestions?.handleKeydown(event)) return
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    submitSearch()
+  }
+}
+function submitSearch(value) {
+  const q = normalizeSearch(typeof value === 'string' ? value : searchQuery.value)
   if (!q) return
+  rememberSearch(q)
+  focusedSearch.value = ''
   searchQuery.value = q
   searchOpen.value = false
   categoriesMenu.value = false
   leftDrawerOpen.value = false
   router.push({ path: '/buscar', query: { q } })
 }
+watch(() => route.fullPath, () => { focusedSearch.value = '' })
 watch(() => route.path, (path) => {
   if (path === '/categorias' || path === '/subcategoria' || path.startsWith('/catalogo/')) mobileTab.value = 'search'
   else if (path === '/') mobileTab.value = 'home'
@@ -767,6 +821,7 @@ const footerSocialLinks = [
 
 
 function closeSearch() {
+  focusedSearch.value = ''
   searchOpen.value = false
   searchQuery.value = ''
 }
@@ -821,6 +876,9 @@ async function showOffers() {
 }
 </script>
 <style lang="scss">
+@media (max-width: 1023px) {
+  .sn-footer.sn-footer--keyboard { display: none !important; }
+}
 .cart-merge-notice {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) auto 28px;

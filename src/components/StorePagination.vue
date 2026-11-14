@@ -2,7 +2,7 @@
   <nav class="store-pagination" :aria-label="ariaLabel">
     <span class="store-pagination__status">Página {{ modelValue }} de {{ max }}</span>
     <div class="store-pagination__controls">
-      <q-btn flat dense no-caps icon="chevron_left" label="Anterior" aria-label="Página anterior" :disable="modelValue <= 1" @click="$emit('update:modelValue', modelValue - 1)" />
+      <q-btn flat dense no-caps icon="chevron_left" aria-label="Página anterior" :disable="modelValue <= 1" @click="$emit('update:modelValue', modelValue - 1)" />
       <q-pagination
         :model-value="modelValue"
         :max="max"
@@ -12,7 +12,7 @@
         color="primary"
         @update:model-value="$emit('update:modelValue', $event)"
       />
-      <q-btn flat dense no-caps icon-right="chevron_right" label="Siguiente" aria-label="Página siguiente" :disable="modelValue >= max" @click="$emit('update:modelValue', modelValue + 1)" />
+      <q-btn flat dense no-caps icon="chevron_right" aria-label="Página siguiente" :disable="modelValue >= max" @click="$emit('update:modelValue', modelValue + 1)" />
     </div>
   </nav>
 </template>

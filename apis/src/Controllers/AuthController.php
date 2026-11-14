@@ -44,6 +44,38 @@ class AuthController
         }
     }
 
+    public function summary()
+    {
+        try {
+            return Response::success($this->service->accountSummary(), 200);
+        } catch (ApiException $e) {
+            return Response::error($e->getErrorCodeName(), $e->getMessage(), $e->getStatus());
+        }
+    }
+
+    public function orders()
+    {
+        try {
+            $page = $this->integerQuery('page', 1, 1000000);
+            $limit = $this->integerQuery('limit', 10, 50);
+            return Response::success($this->service->accountOrders($page, $limit), 200);
+        } catch (ApiException $e) {
+            return Response::error($e->getErrorCodeName(), $e->getMessage(), $e->getStatus());
+        }
+    }
+
+    private function integerQuery($name, $default, $max)
+    {
+        if (!array_key_exists($name, $_GET)) return $default;
+        $value = $_GET[$name];
+        if (!is_string($value) || !preg_match('/^[0-9]+$/D', $value)) {
+            throw new ApiException('VALIDATION_ERROR', 'Parametro invalido: ' . $name . '.', 422);
+        }
+        $number = filter_var($value, FILTER_VALIDATE_INT, array('options' => array('min_range' => 1, 'max_range' => $max)));
+        if ($number === false) throw new ApiException('VALIDATION_ERROR', 'Parametro fuera de rango: ' . $name . '.', 422);
+        return $number;
+    }
+
     public function logout()
     {
         try {

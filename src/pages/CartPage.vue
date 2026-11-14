@@ -21,9 +21,9 @@
       <p>Tu carrito está vacío.</p>
       <q-btn no-caps color="primary" unelevated label="Explorar productos" to="/categorias" />
     </div>
-    <template v-else>
+    <div v-else class="cart-layout" :style="{ '--cart-summary-top': `${summaryOffset}px` }">
       <div class="cart-items">
-        <article v-for="item in items" :key="item.id_producto" class="cart-item">
+        <article v-for="item in items" :key="item.id_producto" class="cart-item" :class="{ 'cart-item--unavailable': !item.puede_comprar }">
           <RouterLink :to="productLocation(item)"
             ><img v-image-skeleton :src="item.imagen || fallback" :alt="item.nombre" @error="imageFailed"
           /></RouterLink>
@@ -49,7 +49,21 @@
                 :aria-label="`Quitar una pieza de ${item.nombre}`"
                 @click="changeQuantity(item.id_producto, item.quantity - 1)"
               />
-              <span>{{ item.quantity }}</span>
+              <input
+                class="cart-item__quantity-input"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                maxlength="4"
+                :value="quantityDrafts[item.id_producto] ?? item.quantity"
+                :disabled="busy"
+                :aria-label="`Cantidad de ${item.nombre}`"
+                @focus="$event.target.select()"
+                @input="quantityDrafts[item.id_producto] = $event.target.value"
+                @blur="commitQuantity(item)"
+                @keydown.enter.prevent="$event.target.blur()"
+                @keydown.esc.prevent="cancelQuantity(item, $event)"
+              />
               <q-btn
                 flat
                 round
@@ -76,8 +90,14 @@
         </article>
       </div>
       <div class="cart-total" role="status" aria-label="Total del carrito" :aria-busy="busy">
-        <span class="cart-total__desktop">Total <q-spinner v-if="busy" size="16px" aria-label="Actualizando total" /></span>
-        <strong class="cart-total__desktop">{{ money(total) }}</strong>
+        <div class="cart-summary-desktop">
+          <h2>Resumen de tu compra</h2>
+          <div class="cart-summary-desktop__row"><span>Productos</span><strong>{{ items.length }}</strong></div>
+          <div class="cart-summary-desktop__row"><span>Piezas</span><strong>{{ cartCount }}</strong></div>
+          <div v-if="savings > 0" class="cart-summary-desktop__savings"><span><q-icon name="savings" aria-hidden="true" /> Tu ahorro</span><strong>{{ money(savings) }}</strong></div>
+          <div class="cart-summary-desktop__total"><span>Total de tu compra</span><div><q-spinner v-if="busy" size="18px" aria-label="Actualizando total" /><strong>{{ money(total) }}</strong></div></div>
+          <q-btn unelevated no-caps label="Continuar con mi pedido" icon-right="arrow_forward" to="/checkout" class="cart-summary-desktop__continue" :disable="busy || total <= 0" />
+        </div>
         <div class="cart-summary-mobile">
           <div class="cart-summary-mobile__heading">
             <div>
@@ -96,14 +116,14 @@
           <q-btn unelevated no-caps label="Continuar con mi pedido" icon-right="arrow_forward" to="/checkout" class="cart-summary-mobile__continue" :disable="busy || total <= 0" />
         </div>
       </div>
-    </template>
+    </div>
   </q-page>
 </template>
 
 <script setup>
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import ProductBadge from 'src/components/ProductBadge.vue'
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useAuthSession } from 'src/services/authSession'
 import { useCart, MAX_CART_QUANTITY } from 'src/services/cart'
 import { productLocation } from 'src/utils/productRoutes'
@@ -113,6 +133,40 @@ const { loadCurrentUser } = useAuthSession()
 const refreshing = ref(true)
 const refreshError = ref(false)
 const mutationError = ref('')
+const quantityDrafts = ref({})
+const summaryOffset = ref(180)
+let headerObserver
+onMounted(() => {
+  const header = document.querySelector('.sn-header')
+  const updateOffset = () => { summaryOffset.value = (header?.getBoundingClientRect().height || 0) + 16 }
+  updateOffset()
+  if (header) {
+    headerObserver = new ResizeObserver(updateOffset)
+    headerObserver.observe(header)
+  }
+})
+onBeforeUnmount(() => headerObserver?.disconnect())
+async function commitQuantity(item) {
+  const draft = quantityDrafts.value[item.id_producto]
+  if (draft === undefined) return
+  const value = String(draft).trim()
+  const quantity = Number(value)
+  if (!/^[0-9]+$/.test(value) || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_CART_QUANTITY) {
+    mutationError.value = `Ingresa una cantidad entre 1 y ${MAX_CART_QUANTITY} piezas.`
+    delete quantityDrafts.value[item.id_producto]
+    return
+  }
+  try {
+    if (!busy.value && quantity !== item.quantity) await changeQuantity(item.id_producto, quantity)
+  } finally {
+    delete quantityDrafts.value[item.id_producto]
+  }
+}
+function cancelQuantity(item, event) {
+  delete quantityDrafts.value[item.id_producto]
+  event.target.value = item.quantity
+  event.target.blur()
+}
 async function refreshCart() {
   refreshing.value = true
   mutationError.value = ''
@@ -127,6 +181,7 @@ async function refreshCart() {
   }
 }
 async function changeQuantity(id, quantity) {
+  if (busy.value) return
   mutationError.value = ''
   try { await setQuantity(id, quantity) }
   catch (error) { mutationError.value = error.message }
@@ -259,6 +314,21 @@ function imageFailed(event) {
   border-radius: 10px;
   color: #c92c5b;
 }
+.cart-item__quantity-input {
+  width: 42px;
+  min-width: 0;
+  height: 32px;
+  padding: 0 2px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  text-align: center;
+}
+.cart-item__quantity-input:focus-visible { outline: 2px solid #df2f61; outline-offset: -2px; background: #fff; }
+.cart-item__quantity-input:disabled { opacity: .65; }
 .cart-item__end {
   display: flex;
   flex-direction: column;
@@ -301,6 +371,44 @@ function imageFailed(event) {
   font-size: 24px;
 }
 .cart-summary-mobile { display: none; }
+.cart-summary-desktop { display: none; }
+@media (min-width: 1024px) {
+  .cart-page { max-width: 1280px; padding-bottom: 48px; }
+  .cart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 24px; }
+  .cart-items { min-width: 0; }
+  .cart-total {
+    position: sticky;
+    top: var(--cart-summary-top);
+    left: auto;
+    bottom: auto;
+    z-index: 1;
+    transform: none;
+    display: block;
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    max-height: calc(100dvh - var(--cart-summary-top) - 20px);
+    overflow-y: auto;
+    padding: 24px;
+    border-color: #efdee6;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 6px 24px #54314009;
+  }
+  .cart-summary-desktop { display: block; }
+  .cart-summary-desktop h2 { margin: 0 0 24px; color: #412536; font-size: 19px; font-weight: 700; line-height: 1.3; }
+  .cart-summary-desktop__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; color: #8a7280; font-size: 13px; }
+  .cart-summary-desktop__row strong { color: #59414e; font-size: 14px; font-weight: 600; }
+  .cart-summary-desktop__savings { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px; padding: 11px; border-radius: 9px; background: #ecf8f0; color: #177345; font-size: 12px; }
+  .cart-summary-desktop__savings > span { display: flex; align-items: center; gap: 6px; }
+  .cart-summary-desktop__savings strong { color: inherit; font-size: 15px; white-space: nowrap; }
+  .cart-summary-desktop__total { margin-top: 22px; padding-top: 20px; border-top: 1px solid #f1e5eb; }
+  .cart-summary-desktop__total > span { color: #8a7280; font-size: 12px; }
+  .cart-summary-desktop__total > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 5px; }
+  .cart-summary-desktop__total strong { color: #412536; font-size: 30px; font-weight: 800; line-height: 1.3; letter-spacing: -.03em; overflow-wrap: anywhere; }
+  .cart-summary-desktop__continue { width: 100%; min-height: 46px; margin-top: 22px; border-radius: 10px; background: linear-gradient(110deg, #ff4f79, #e72e65); color: #fff; font-size: 12px; font-weight: 700; }
+  .cart-summary-desktop__continue :deep(.q-icon) { font-size: 18px; }
+}
 @media (max-width: 1023px) {
   .cart-page {
     padding-bottom: calc(290px + env(safe-area-inset-bottom, 0px));
@@ -336,18 +444,60 @@ function imageFailed(event) {
     padding: 10px 12px calc(290px + env(safe-area-inset-bottom, 0px));
   }
   .cart-item {
-    gap: 8px;
-    padding: 10px;
+    display: grid;
+    grid-template-columns: 102px minmax(0, 1fr) 28px;
+    gap: 3px 8px;
+    padding: 8px;
+    border-radius: 12px;
+  }
+  .cart-items { gap: 8px; }
+  .cart-item > a {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    justify-self: center;
+    align-self: start;
   }
   .cart-item img {
-    width: 55px;
-    height: 70px;
+    display: block;
+    width: 44px;
+    height: 44px;
   }
+  .cart-item__details, .cart-item__end { display: contents; }
   .cart-item__details > a {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .cart-item__meta { grid-column: 2 / -1; grid-row: 2; gap: 3px 6px; }
+  .cart-item__price { grid-column: 2 / -1; grid-row: 3; gap: 4px; }
+  .cart-item__price strong { font-size: 15px; }
+  .cart-item__quantity {
+    grid-column: 1;
+    grid-row: 3 / 5;
+    justify-self: center;
+    align-self: end;
+    gap: 2px;
+    margin-top: 0;
+    border-radius: 8px;
     font-size: 12px;
   }
+  .cart-item__quantity .q-btn { min-width: 28px; min-height: 32px; }
+  .cart-item__quantity :deep(.q-icon) { font-size: 18px; }
+  .cart-item__quantity-input { width: 40px; }
+  .cart-item__end > .q-btn { grid-column: 3; grid-row: 1; justify-self: end; align-self: start; min-width: 28px; min-height: 28px; }
+  .cart-item__end > .q-btn :deep(.q-icon) { font-size: 19px; }
+  .cart-item__details > small { grid-column: 2 / -1; grid-row: 4; font-size: 10px; }
+  .cart-item--unavailable .cart-item__quantity { grid-row: 3 / 6; }
+  .cart-item--unavailable .cart-item__end strong { grid-row: 5; }
   .cart-item__end strong {
-    font-size: 14px;
+    grid-column: 2 / -1;
+    grid-row: 4;
+    justify-self: end;
+    align-self: end;
+    font-size: 13px;
+    line-height: 1.4;
   }
 }
 </style>

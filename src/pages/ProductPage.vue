@@ -115,15 +115,16 @@
               <div v-else class="product-pricing__offer">
                 <strong>{{ money(purchaseQuote.price) }}</strong
                 ><ProductBadge :product="product" />
+                <span v-if="canPurchase && !product.es_vip" class="product-pricing__saving">
+                  {{ purchaseQuote.type === 'caja' ? 'Precio por caja' : purchaseQuote.type === 'mayoreo' ? 'Precio de mayoreo' : 'Precio por unidad' }}
+                </span>
               </div>
             </div>
             <span v-if="product.ahorro > 0" class="product-pricing__saving"
               >Ahorras {{ money(product.ahorro) }}</span
             >
-            <span v-if="canPurchase && !product.es_vip && !product.tiene_descuento" class="product-pricing__saving">
-              {{ purchaseQuote.type === 'caja' ? 'Precio por caja' : purchaseQuote.type === 'mayoreo' ? 'Precio de mayoreo' : 'Precio por unidad' }}
-              · {{ purchaseQuote.pieces }} piezas de este código
-              <template v-if="purchaseQuote.previous"> ({{ purchaseQuote.previous }} ya en tu carrito)</template>
+            <span v-if="canPurchase && !product.es_vip && !product.tiene_descuento && purchaseQuote.previous" class="product-pricing__saving">
+              {{ purchaseQuote.previous }} {{ purchaseQuote.previous === 1 ? 'pieza de este código en tu carrito' : 'piezas de este código en tu carrito' }}
             </span>
           </div>
           <div v-if="priceTiers.length" class="product-tiers">
@@ -402,13 +403,10 @@ async function addToCart() {
     const latest = await getProduct(id)
     if (Number(route.params.id) !== id) return
     product.value = latest
-    const cartItem = await addProduct(latest, pieces)
+    await addProduct(latest, pieces)
     if (Number(route.params.id) !== id) return
     cartError.value = false
     cartMessage.value = `${pieces} ${pieces === 1 ? 'pieza agregada' : 'piezas agregadas'} al carrito.`
-    if (cartItem && ['mayoreo', 'caja'].includes(cartItem.tipo_precio)) {
-      cartMessage.value += ` Precio ${cartItem.tipo_precio === 'caja' ? 'por caja' : 'de mayoreo'}: ${money(cartItem.precio_final)} por pieza (${cartItem.piezas_codigo} del mismo código).`
-    }
   } catch (error) {
     cartError.value = true
     cartMessage.value = error.message

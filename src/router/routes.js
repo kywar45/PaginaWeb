@@ -30,6 +30,12 @@ const routes = [
     ],
   },
 
+  {
+    path: '/pedido/:token(p1\\.[A-Za-z0-9_-]{54})/pdf',
+    name: 'pedido-pdf',
+    component: () => import('pages/OrderPdfPage.vue'),
+  },
+
   // Always leave this as last one,
   // but you can also remove it
   {
