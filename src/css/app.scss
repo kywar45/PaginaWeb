@@ -2865,3 +2865,15 @@ body,
     color: var(--sn-pink) !important;
   }
 }
+// Keep mobile form text readable without triggering focus zoom in iOS Safari.
+// This also covers inputs rendered in dialogs and select popups outside the page.
+@media (max-width: 1023px), (hover: none) and (pointer: coarse) {
+  body input:not([type]),
+  body input:is([type='text'], [type='search'], [type='email'], [type='password'], [type='tel'], [type='number'], [type='url'], [type='date'], [type='datetime-local'], [type='time']),
+  body textarea,
+  body select,
+  body .q-field .q-field__native,
+  body .q-field .q-field__input {
+    font-size: 16px !important;
+  }
+}

@@ -2,6 +2,9 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '#q-app/wrappers'
+import { buildPageSeo, serializeSchema, SITE_ORIGIN } from './src/utils/seo.js'
+
+const publicPath = '/ImportadoraSupernova/'
 
 export default defineConfig((/* ctx */) => {
   return {
@@ -11,7 +14,8 @@ export default defineConfig((/* ctx */) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: ['loading'],
+    boot: ['loading', 'seo'],
+    htmlVariables: { seoHome: buildPageSeo('/', { homeUrl: new URL(publicPath, SITE_ORIGIN).href }), serializeSchema },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],
@@ -44,7 +48,7 @@ export default defineConfig((/* ctx */) => {
 
       // rebuildCache: true, // rebuilds Vite/linter/etc cache on startup
 
-      publicPath: '/ImportadoraSupernova/',
+      publicPath,
       // analyze: true,
       // env: {},
       // rawDefine: {}

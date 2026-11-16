@@ -25,11 +25,24 @@ class OrderPdfService
     {
         $order = $this->orders->findOwned($id, $userId);
         if (!$order) throw new ApiException('ORDER_NOT_FOUND', 'El pedido no existe o no pertenece a tu cuenta.', 404);
+        if (trim((string) $order['orden']) === '') throw new ApiException('ORDER_REFERENCE_CONFLICT', 'No pudimos identificar el detalle de este pedido.', 409);
+        return $this->prepareData($order, $this->orders->itemsForOrder(trim((string) $order['orden']), $userId), $email);
+    }
+
+    public function prepareGuest($id, $customerId)
+    {
+        $order = $this->orders->findGuestOwned($id, $customerId);
+        if (!$order) throw new ApiException('ORDER_NOT_FOUND', 'El pedido no está disponible para este invitado.', 404);
+        if (trim((string) $order['orden']) === '') throw new ApiException('ORDER_REFERENCE_CONFLICT', 'No pudimos identificar el detalle de este pedido.', 409);
+        return $this->prepareData($order, $this->orders->itemsForGuestOrder(trim((string) $order['orden']), $customerId), $order['correo']);
+    }
+
+    private function prepareData(array $order, array $rows, $email)
+    {
         $reference = trim((string) $order['orden']);
         if ($reference === '') {
             throw new ApiException('ORDER_REFERENCE_CONFLICT', 'No pudimos identificar el detalle de este pedido. Comunicate con Supernova.', 409);
         }
-        $rows = $this->orders->itemsForOrder($reference, $userId);
         $items = array();
         $subtotalUnits = 0;
         $displaySubtotal = 0;

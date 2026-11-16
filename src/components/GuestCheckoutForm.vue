@@ -126,14 +126,6 @@
         <p v-if="confirmed" class="guest-checkout__confirmed" role="status">
           <q-icon name="check_circle" /> Datos de envío revisados.
         </p>
-        <q-btn
-          unelevated
-          no-caps
-          type="submit"
-          color="primary"
-          label="Revisar datos de envío"
-          icon-right="check"
-        />
       </div>
     </q-form>
   </section>

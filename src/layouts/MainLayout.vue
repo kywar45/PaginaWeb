@@ -510,13 +510,20 @@
           </div>
           <div class="sn-footer-stores-column">
             <div class="sn-footer-title">Tiendas oficiales</div>
-            <div class="sn-footer-stores-grid">
-              <article v-for="store in footerStores" :key="store.phone" class="sn-store-card">
+            <LoadingSkeleton v-if="footerStoresLoading" variant="list" :count="2" label="Cargando tiendas..." />
+            <div v-else-if="footerStoresError" role="alert">
+              <p>No pudimos cargar las tiendas.</p>
+              <q-btn flat dense no-caps color="white" label="Reintentar" @click="loadFooterStores" />
+            </div>
+            <p v-else-if="!footerStores.length">No hay tiendas disponibles por el momento.</p>
+            <div v-else class="sn-footer-stores-grid">
+              <article v-for="store in footerStores" :key="store.id" class="sn-store-card">
                 <q-icon name="location_on" />
                 <div class="sn-store-card__body">
+                  <strong>{{ store.name }}</strong>
                   <p>{{ store.address }}</p>
-                  <a :href="store.href">{{ store.phone }}</a>
-                  <span>{{ store.hours }}</span>
+                  <a v-if="store.phone && store.href" :href="store.href">{{ store.phone }}</a>
+                  <span v-if="store.hours">{{ store.hours }}</span>
                 </div>
                 <q-btn
                   flat
@@ -598,6 +605,7 @@ import { useProductNavigation } from 'src/services/productNavigation'
 import { useCart } from 'src/services/cart'
 const openProduct = useProductNavigation()
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { getBranches } from 'src/services/branchApi'
 import { useRoute, useRouter } from 'vue-router'
 import { catalogLocation } from 'src/utils/catalogRoutes'
 import StoreCategoryMenu from 'src/components/StoreCategoryMenu.vue'
@@ -749,40 +757,37 @@ const footerContacts = [
   },
 ]
 
-const footerStores = [
-  {
-    address: 'Calle articulo 123 #41, piso 4. colonia centro, CDMX.',
-    phone: '55 3882-6981',
-    href: 'tel:+525538826981',
-    mapsHref:
-      'https://www.google.com/maps/search/?api=1&query=Calle%20articulo%20123%2041%20colonia%20centro%20CDMX',
-    hours: 'Lun-Sab 09:00am - 4:00pm',
-  },
-  {
-    address: 'Calle manuel de la peña y peña plaza #18 planta baja, locales A5 y A6.',
-    phone: '56 3353-3333',
-    href: 'tel:+525633533333',
-    mapsHref:
-      'https://www.google.com/maps/search/?api=1&query=Calle%20manuel%20de%20la%20pena%20y%20pena%20plaza%2018%20CDMX',
-    hours: 'Lun-Sab 09:00am - 4:00pm',
-  },
-  {
-    address: 'Calle manuel de la peña y peña plaza #13 planta baja, locales 22 y 23',
-    phone: '56 1333-0202',
-    href: 'tel:+525613330202',
-    mapsHref:
-      'https://www.google.com/maps/search/?api=1&query=Calle%20manuel%20de%20la%20pena%20y%20pena%20plaza%2013%20CDMX',
-    hours: 'Lun-Sab 09:00am - 4:00pm',
-  },
-  {
-    address: 'Calle Republica de colombia 79, Plaza Carmen #51, planta baja, local 23 y 24.',
-    phone: '55 7417-7482',
-    href: 'tel:+525574177482',
-    mapsHref:
-      'https://www.google.com/maps/search/?api=1&query=Calle%20Republica%20de%20colombia%2079%20Plaza%20Carmen%2051%20CDMX',
-    hours: 'Lun-Sab 09:00am - 4:00pm',
-  },
-]
+const footerBranches = ref([])
+const footerStoresLoading = ref(true)
+const footerStoresError = ref(false)
+const footerStores = computed(() => footerBranches.value.map(branch => ({
+  id: branch.id, name: branch.nombre, address: branch.direccion,
+  phone: branch.telefono, href: branch.telefono_url,
+  mapsHref: branch.google_maps_url, hours: branch.horario_atencion,
+})))
+let footerStoreRequest
+let footerStoresDisposed = false
+async function loadFooterStores() {
+  footerStoreRequest?.abort()
+  const current = new AbortController()
+  footerStoreRequest = current
+  const timeout = setTimeout(() => current.abort(), 15000)
+  footerStoresLoading.value = true
+  footerStoresError.value = false
+  footerBranches.value = []
+  try {
+    const result = await getBranches({ signal: current.signal })
+    if (!footerStoresDisposed && footerStoreRequest === current) footerBranches.value = result
+  } catch {
+    if (!footerStoresDisposed && footerStoreRequest === current) footerStoresError.value = true
+  } finally {
+    clearTimeout(timeout)
+    if (!footerStoresDisposed && footerStoreRequest === current) footerStoresLoading.value = false
+  }
+}
+onMounted(loadFooterStores)
+onBeforeUnmount(() => { footerStoresDisposed = true; footerStoreRequest?.abort() })
+
 
 const footerSocialLinks = [
   { name: 'Facebook', image: publicAsset('img/facebook.png'), href: 'https://www.facebook.com/profile.php?id=61558081776009&ref=NONE_xav_ig_profile_page_web#' },

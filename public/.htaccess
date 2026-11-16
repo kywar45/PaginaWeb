@@ -1,4 +1,4 @@
-DirectoryIndex index.html
+DirectoryIndex index.php index.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -9,7 +9,7 @@ DirectoryIndex index.html
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Enviar todas las rutas internas de la SPA a index.html
+# Enviar rutas de la SPA a PHP para entregar metadatos de cada página en el HTML.
 
-RewriteRule . /ImportadoraSupernova/index.html [L]
+RewriteRule . /ImportadoraSupernova/index.php [L]
 </IfModule>

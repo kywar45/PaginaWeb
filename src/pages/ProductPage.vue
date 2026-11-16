@@ -384,6 +384,7 @@ import { useCart, MAX_CART_QUANTITY } from 'src/services/cart'
 import { useAuthSession } from 'src/services/authSession'
 import { previewCartPrice } from 'src/utils/cartPricing'
 import { copyToClipboard } from 'quasar'
+import { applyPageSeo, buildPageSeo, SITE_ORIGIN } from 'src/utils/seo'
 
 const route = useRoute()
 const router = useRouter()
@@ -415,6 +416,9 @@ async function addToCart() {
   }
 }
 const product = ref(null)
+watch(product, (value) => {
+  if (value) applyPageSeo(buildPageSeo(route.path, { homeUrl: new URL(import.meta.env.BASE_URL || '/', SITE_ORIGIN).href, product: value }))
+})
 const purchaseQuote = computed(() => product.value
   ? previewCartPrice(product.value, Number(quantity.value), cartItems.value)
   : { price: 0, type: 'unidad', pieces: 0, previous: 0 })
@@ -587,6 +591,7 @@ async function loadProduct() {
   } catch (error) {
     if (!current.signal.aborted) {
       notFound.value = error.status === 404
+      applyPageSeo(buildPageSeo(route.path, { homeUrl: new URL(import.meta.env.BASE_URL || '/', SITE_ORIGIN).href, notFound: error.status === 404, unavailable: error.status !== 404 }))
       errorMessage.value = error.message || 'Intenta de nuevo en un momento.'
     }
   } finally {

@@ -29,7 +29,7 @@ class CartService
         $this->guestOwner = $guestOwner;
     }
 
-    public function execute($action = 'leer', $id = null, $quantity = null)
+    public function execute($action = 'leer', $id = null, $quantity = null, callable $onSnapshot = null)
     {
         if (!in_array($action, array('leer', 'agregar', 'cantidad', 'eliminar', 'fusionar'), true)) {
             throw new ApiException('VALIDATION_ERROR', 'Accion de carrito invalida.', 422);
@@ -46,7 +46,7 @@ class CartService
         }
         if ($action === 'leer' || $action === 'fusionar') $id = null;
 
-        $operation = function () use ($action, $id, $quantity) {
+        $operation = function () use ($action, $id, $quantity, $onSnapshot) {
             $lines = array();
             $removeIds = array();
             foreach ($this->carts->lines($this->owner) as $row) {
@@ -172,7 +172,7 @@ class CartService
                 foreach ($items as $item) if (!$item['puede_comprar']) $unavailable++;
                 $result['fusion'] = array('fusionado' => $mergedPieces > 0, 'piezas' => $mergedPieces, 'no_disponibles' => $unavailable);
             }
-            return $result;
+            return $onSnapshot === null ? $result : $onSnapshot($result);
         };
         if ($action === 'fusionar' && $this->guestOwner !== null) {
             return $this->carts->withOwnersLock(array($this->owner, $this->guestOwner), $operation);

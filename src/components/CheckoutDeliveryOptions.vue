@@ -19,7 +19,7 @@
     </p>
     <template v-else>
       <div class="checkout-delivery__choices" role="group" aria-label="Tipo de entrega">
-        <label
+        <div
           v-for="option in options"
           :key="option.envio"
           class="checkout-delivery__choice"
@@ -27,11 +27,13 @@
             'is-selected': mode === option.envio,
             'is-disabled': !available(option.envio).length,
           }"
+          @click="selectMode(option.envio)"
         >
           <q-radio
             :model-value="mode"
             :val="option.envio"
             :disable="!available(option.envio).length"
+            :aria-label="option.title"
             color="primary"
             @update:model-value="selectMode"
           />
@@ -42,7 +44,7 @@
               available(option.envio).length ? option.description : 'No disponible por el momento'
             }}</small></span
           >
-        </label>
+        </div>
       </div>
       <div v-if="mode !== null" class="checkout-delivery__details">
         <div class="checkout-delivery__notice" :class="{ 'is-shipping': mode === 1 }">
@@ -88,11 +90,12 @@
             role="group"
             aria-label="Sucursal para entrega personal"
           >
-            <label
+            <div
               v-for="branch in branches"
               :key="branch.id"
               class="checkout-delivery__branch"
               :class="{ 'is-selected': selection.sucursal_id === branch.id }"
+              @click="selectBranch(branch.id)"
             >
               <q-radio
                 :model-value="selection.sucursal_id"
@@ -114,7 +117,7 @@
                   {{ branch.horario_atencion }}</small
                 >
               </span>
-            </label>
+            </div>
           </div>
         </div>
         <q-select
@@ -171,7 +174,8 @@ const options = [
 ]
 let request
 let disposed = false
-const available = (envio) => methods.value.filter((method) => method.envio === envio)
+const available = (envio) =>
+  methods.value.filter((method) => method.envio === envio && (envio !== 0 || method.id === 21))
 watch(
   selection,
   () => {
@@ -229,7 +233,6 @@ async function loadBranches() {
   branchesLoading.value = true
   branchesError.value = ''
   branches.value = []
-  selection.value = { ...selection.value, sucursal_id: null }
   try {
     const result = await getBranches({ signal: current.signal })
     if (!disposed && branchRequest === current) {

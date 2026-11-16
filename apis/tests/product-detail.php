@@ -82,6 +82,7 @@ check($vipData['variantes'][0]['es_vip'] && $vipData['relacionados'][0]['es_vip'
 check(!array_key_exists('precio_costo', $vipData['variantes'][0]), 'Variant cost never exposed');
 $repo->row['precio_costo'] = '50.00';
 check($vip->getProduct(17)['producto']['precio_final'] === 57.5, 'VIP price 57.50 beats offer 80');
+check($vip->getProduct(17)['producto']['precio_publico'] === 80.0, 'Public metadata retains offer 80 despite VIP price 57.50');
 $repo->row['descuento'] = 'no';
 check($vip->getProduct(17)['producto']['precio_final'] === 57.5, 'No offer uses cost times 1.15');
 check($normal->getProduct(17)['producto']['precio_final'] === 100.0, 'Normal customer retail unchanged');

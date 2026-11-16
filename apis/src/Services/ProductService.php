@@ -183,6 +183,7 @@ class ProductService
         $discountFlag = strtolower(trim((string) $row['descuento']));
         $hasDiscount = $discountFlag === 'si' && $discountPrice > 0;
         $finalPrice = $hasDiscount ? $discountPrice : $price;
+        $publicPrice = $finalPrice;
         if ($this->isVip) {
             $cost = $this->moneyValue($row['precio_costo'] ?? null);
             if (!isset($row['precio_costo']) || trim((string) $row['precio_costo']) === '' || $cost < 0) {
@@ -202,6 +203,7 @@ class ProductService
             'imagen_nombre' => $row['imagen'],
             'precio_normal' => $price,
             'precio_final' => $finalPrice,
+            'precio_publico' => $publicPrice,
             'es_vip' => $this->isVip,
             'puede_comprar' => (int) $row['estatus'] === 1 || $this->isVip,
             'precio_mayoreo' => $this->moneyValue($row['preciom']),

@@ -7,12 +7,19 @@
       <q-icon name="description" aria-hidden="true" />
       <p>{{ errorMessage }}</p>
       <q-btn
-        v-if="sessionExpired"
+        v-if="sessionExpired && !isGuest"
         unelevated
         no-caps
         color="primary"
         label="Iniciar sesión"
         to="/login"
+      /><q-btn
+        v-else-if="isGuest && (invalidLink || sessionExpired)"
+        unelevated
+        no-caps
+        color="primary"
+        label="Volver al checkout"
+        to="/checkout"
       /><q-btn
         v-else-if="invalidLink"
         unelevated
@@ -22,7 +29,16 @@
         to="/panel?seccion=pedidos"
       /><q-btn v-else unelevated no-caps color="primary" label="Reintentar" @click="loadPdf" />
     </div>
-    <iframe v-else :src="pdfSource" title="PDF de tu pedido" class="order-pdf-page__document" />
+    <template v-else>
+      <p v-if="printHint" class="order-pdf-page__hint" role="status">{{ printHint }}</p>
+      <iframe
+        ref="pdfFrame"
+        :src="pdfSource"
+        title="PDF de tu pedido"
+        class="order-pdf-page__document"
+        @load="onPdfLoaded"
+      />
+    </template>
   </main>
 </template>
 
@@ -30,9 +46,15 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { getOrderPdf } from 'src/services/authApi'
+import { getGuestOrderPdf } from 'src/services/checkoutApi'
 
 const route = useRoute()
 const orderToken = computed(() => String(route.params.token || ''))
+const isGuest = computed(() => route.name === 'pedido-invitado-pdf')
+const pdfFrame = ref(null)
+const printHint = ref('')
+let printTimer
+let autoPrinted = false
 const pdfSource = ref('')
 const loading = ref(true)
 const errorMessage = ref('')
@@ -52,24 +74,46 @@ async function loadPdf() {
   errorMessage.value = ''
   sessionExpired.value = false
   invalidLink.value = false
+  printHint.value = ''
+  autoPrinted = false
+  clearTimeout(printTimer)
   try {
-    const pdf = await getOrderPdf(orderToken.value, { signal: current.signal })
+    const pdf = isGuest.value
+      ? await getGuestOrderPdf(orderToken.value, route.params.cliente, { signal: current.signal })
+      : await getOrderPdf(orderToken.value, { signal: current.signal })
     if (!current.signal.aborted) pdfSource.value = URL.createObjectURL(pdf)
   } catch (error) {
     if (!current.signal.aborted) {
       sessionExpired.value = error.status === 401
       invalidLink.value = error.status === 404 || error.status === 410
-      errorMessage.value = sessionExpired.value
-        ? 'Tu sesión terminó. Inicia sesión para abrir tu pedido.'
-        : error.message || 'No pudimos abrir este pedido.'
+      errorMessage.value =
+        sessionExpired.value && !isGuest.value
+          ? 'Tu sesión terminó. Inicia sesión para abrir tu pedido.'
+          : error.message || 'No pudimos abrir este pedido.'
     }
   } finally {
     if (request === current) loading.value = false
   }
 }
-watch(orderToken, loadPdf, { immediate: true })
+function printPdf() {
+  try {
+    const frame = pdfFrame.value?.contentWindow
+    if (!frame) return
+    frame.focus()
+    frame.print()
+  } catch {
+    printHint.value = 'Usa la opción de imprimir o descargar del visor de PDF.'
+  }
+}
+function onPdfLoaded() {
+  if (route.query.imprimir !== '1' || autoPrinted) return
+  autoPrinted = true
+  printTimer = setTimeout(printPdf, 600)
+}
+watch(() => [orderToken.value, route.params.cliente, isGuest.value], loadPdf, { immediate: true })
 onBeforeUnmount(() => {
   request?.abort()
+  clearTimeout(printTimer)
   releasePdf()
 })
 </script>
@@ -81,6 +125,13 @@ onBeforeUnmount(() => {
   height: 100dvh;
   min-height: 320px;
   background: #f4f2f3;
+}
+.order-pdf-page__hint {
+  margin: 0;
+  padding: 8px 18px;
+  color: #666;
+  background: #fff;
+  font-size: 12px;
 }
 .order-pdf-page__document {
   display: block;

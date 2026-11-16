@@ -10,10 +10,10 @@ class BranchRepository
 
     public function listActive()
     {
-        return $this->pdo->query('SELECT id, nombre, direccion, codigo_postal, telefono,
-            horario_atencion, google_maps_url, latitud, longitud
-            FROM web_sucursales
-            WHERE estatus = 1
-            ORDER BY posicion ASC, id ASC')->fetchAll();
+        return $this->pdo->query('SELECT id, nombre, direccion, NULL AS codigo_postal, phone AS telefono,
+            horario_atencion, google_maps_url, NULL AS latitud, NULL AS longitud
+            FROM admin_tiendas
+            WHERE store = 1 AND estatus = 1
+            ORDER BY id ASC')->fetchAll();
     }
 }

@@ -1,13 +1,13 @@
 # Sucursales
 
 La página `/sucursales` consume `GET /StoreApi/v1/sucursales`.
-Consulta `web_sucursales` con `estatus = 1`, ordenando por `posicion ASC, id ASC`.
-Devuelve nombre, dirección, código postal, teléfono, horario, enlace de mapa y
-coordenadas. No necesita cambios adicionales al esquema proporcionado.
+Consulta `admin_tiendas` con `store = 1 AND estatus = 1`, ordenando por `id ASC`.
+Devuelve nombre, dirección, teléfono (`phone`), horario y enlace de mapa.
+El código postal y las coordenadas quedan vacíos porque no existen en esta tabla.
+El checkout valida el mismo filtro y guarda el ID de `admin_tiendas` en `folios.store_pickup`.
 
 El botón de mapa usa `google_maps_url` si contiene una URL HTTP/HTTPS válida;
-si está vacío, usa latitud y longitud, y si no hay coordenadas válidas busca por
-dirección y código postal. Los campos vacíos de teléfono y horario no se muestran.
+si está vacío, busca por la dirección de `admin_tiendas`. Los campos vacíos de teléfono y horario no se muestran.
 El teléfono genera un enlace `tel:` y el horario admite saltos de línea.
 
 ## Archivos nuevos para subir a StoreApi

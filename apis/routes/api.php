@@ -27,6 +27,11 @@ use App\Services\ShippingCarrierService;
 use App\Controllers\GuestCustomerController;
 use App\Repositories\GuestCustomerRepository;
 use App\Services\GuestCustomerService;
+use App\Controllers\GuestOrderController;
+use App\Repositories\GuestOrderRepository;
+use App\Services\GuestOrderService;
+use App\Services\GuestOrderPdfLink;
+use App\Controllers\GuestOrderPdfController;
 
 
 
@@ -65,6 +70,27 @@ use App\Services\BranchService;
 
 
 return function (Router $router): void {
+    $router->get('/v1/checkout/invitado/correo/pdf', function (): void {
+        $pdo = Connection::get();
+        (new GuestOrderPdfController(new OrderPdfService(new OrderPdfRepository($pdo))))
+            ->showEmail(new \App\Services\GuestOrderEmailService($pdo));
+    });
+    $router->get('/v1/checkout/invitado/pdf', function (): void {
+        $pdo = Connection::get();
+        (new GuestOrderPdfController(new OrderPdfService(new OrderPdfRepository($pdo))))->show();
+    });
+    $router->post('/v1/checkout/invitado/folio', function (): void {
+        $pdo = Connection::get();
+        $auth = new AuthService($pdo, new UserRepository($pdo));
+        $owner = (new CartIdentity())->existingGuest();
+        if ($owner === null) {
+            Response::error('CART_EMPTY', 'Abre tu carrito antes de procesar el pedido.', 409);
+            return;
+        }
+        $cart = new CartService(new CartRepository($pdo), new ProductRepository($pdo), $owner);
+        $customers = new GuestCustomerService(new GuestCustomerRepository($pdo), $auth);
+        (new GuestOrderController(new GuestOrderService($customers, new GuestOrderRepository($pdo), $cart), new GuestOrderPdfLink(), new \App\Services\GuestOrderEmailService($pdo)))->create();
+    });
     $router->post('/v1/checkout/invitado', function (): void {
         $pdo = Connection::get();
         $auth = new AuthService($pdo, new UserRepository($pdo));

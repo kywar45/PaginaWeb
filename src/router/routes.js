@@ -31,6 +31,11 @@ const routes = [
   },
 
   {
+    path: '/pedido/invitado/:cliente(\\d+)/:token(p1\\.[A-Za-z0-9_-]{54})/pdf',
+    name: 'pedido-invitado-pdf',
+    component: () => import('pages/OrderPdfPage.vue'),
+  },
+  {
     path: '/pedido/:token(p1\\.[A-Za-z0-9_-]{54})/pdf',
     name: 'pedido-pdf',
     component: () => import('pages/OrderPdfPage.vue'),

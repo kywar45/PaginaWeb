@@ -32,4 +32,28 @@ class OrderPdfRepository
         $stmt->execute();
         return $stmt->fetchAll();
     }
+
+    public function findGuestOwned($id, $customerId)
+    {
+        $stmt = $this->pdo->prepare('SELECT f.id, f.orden, f.nombres, f.fecha, f.fecha_pago, f.total, f.estatus,
+            g.correo, c.envio AS carrier_envio,
+            CASE WHEN c.envio = 0 THEN COALESCE(t.nombre, c.nombre) ELSE c.nombre END AS carrier_name
+            FROM folios f
+            INNER JOIN web_clientes_invitados g ON g.id = f.id_cliente_invitado
+            LEFT JOIN shipping_carriers c ON c.id = f.shipping_carrier_id
+            LEFT JOIN admin_tiendas t ON t.id = f.store_pickup
+            WHERE f.id = :id AND f.id_cliente_invitado = :cliente AND f.id_usuario IS NULL LIMIT 1');
+        $stmt->execute(array(':id' => $id, ':cliente' => $customerId));
+        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function itemsForGuestOrder($reference, $customerId)
+    {
+        $stmt = $this->pdo->prepare('SELECT r.codigo, r.nombre, r.precio, r.cantidad, p.preciou AS precio_normal
+            FROM registro_usuario r LEFT JOIN productos p ON p.id = r.id_producto
+            WHERE r.orden = :orden AND r.id_cliente_invitado = :cliente AND r.id_usuario IS NULL
+            ORDER BY r.codigo ASC, r.nombre ASC, r.id ASC');
+        $stmt->execute(array(':orden' => $reference, ':cliente' => $customerId));
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
 }

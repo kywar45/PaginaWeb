@@ -73,7 +73,8 @@
         <template v-if="!currentUser">
           <p v-if="processError" class="checkout-process-error" role="alert">{{ processError }}</p>
           <p v-if="readyToProcess" class="checkout-process-ready" role="status">
-            <q-icon name="check_circle" /> Datos del cliente guardados correctamente.
+            <q-icon name="check_circle" /> Pedido {{ savedGuest?.orden }} guardado con sus
+            productos.
           </p>
           <q-btn
             class="checkout-process-button"
@@ -86,19 +87,40 @@
             :disable="cartBusy || readyToProcess"
             @click="processOrder"
           />
+          <q-btn
+            v-if="readyToProcess && savedGuest?.pdf_token"
+            flat
+            no-caps
+            color="primary"
+            icon="print"
+            label="Ver mi pedido"
+            class="checkout-process-button"
+            @click="openReceipt"
+          />
         </template>
       </aside>
     </div>
+    <OrderProcessingDialog
+      :open="processingOpen"
+      :state="processingState"
+      :order="savedGuest"
+      :error="processError"
+      @print="openReceipt"
+      @retry="retryProcessing"
+      @close="processingOpen = false"
+    />
   </q-page>
 </template>
 
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import OrderProcessingDialog from 'src/components/OrderProcessingDialog.vue'
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import GuestCheckoutForm from 'src/components/GuestCheckoutForm.vue'
 import CheckoutDeliveryOptions from 'src/components/CheckoutDeliveryOptions.vue'
 import { emptyGuestDetails, normalizeGuestDetails } from 'src/utils/guestCheckout'
-import { registerGuestCustomer } from 'src/services/checkoutApi'
+import { createGuestFolio } from 'src/services/checkoutApi'
 import { useCart } from 'src/services/cart'
 import { useAuthSession } from 'src/services/authSession'
 import { publicAsset } from 'src/utils/publicAsset'
@@ -114,6 +136,10 @@ const processError = ref('')
 const readyToProcess = ref(false)
 const savingGuest = ref(false)
 const savedGuest = ref(null)
+const processingOpen = ref(false)
+const processingState = ref('processing')
+const router = useRouter()
+onBeforeRouteLeave(() => !savingGuest.value)
 let guestRequest
 let disposed = false
 watch(
@@ -155,24 +181,37 @@ async function processOrder() {
     }
     if (disposed || currentUser.value) return
     const customer = normalizeGuestDetails(guestDetails.value)
-    const fingerprint = JSON.stringify(customer)
+    const fingerprint = checkoutFingerprint(customer)
     if (savedGuest.value?.fingerprint === fingerprint) {
       readyToProcess.value = true
+      processingState.value = 'success'
+      processingOpen.value = true
       return
     }
+    processingState.value = 'processing'
+    processingOpen.value = true
     savingGuest.value = true
     guestRequest = new AbortController()
     const timeout = setTimeout(() => guestRequest.abort(), 20000)
     try {
-      const result = await registerGuestCustomer(customer, { signal: guestRequest.signal })
-      if (
-        disposed ||
-        currentUser.value ||
-        JSON.stringify(normalizeGuestDetails(guestDetails.value)) !== fingerprint
+      const result = await createGuestFolio(
+        customer,
+        { ...deliverySelection.value },
+        { signal: guestRequest.signal },
       )
+      if (disposed) return
+      if (
+        currentUser.value ||
+        checkoutFingerprint(normalizeGuestDetails(guestDetails.value)) !== fingerprint
+      ) {
+        processError.value =
+          'Los datos cambiaron durante el registro. Revisa tu pedido antes de continuar.'
+        processingState.value = 'error'
         return
+      }
       savedGuest.value = { ...result, fingerprint }
       readyToProcess.value = true
+      processingState.value = 'success'
     } finally {
       clearTimeout(timeout)
       savingGuest.value = false
@@ -181,11 +220,51 @@ async function processOrder() {
     if (!disposed)
       processError.value =
         error.name === 'AbortError'
-          ? 'No pudimos confirmar el guardado de tus datos. Puedes reintentar.'
-          : error.message || 'No pudimos guardar tus datos. Intenta de nuevo.'
+          ? 'No pudimos confirmar el registro del folio. Puedes reintentar.'
+          : error.message || 'No pudimos registrar el folio. Intenta de nuevo.'
+    if (!disposed && processingOpen.value) processingState.value = 'error'
   } finally {
     validating.value = false
   }
+}
+function retryProcessing() {
+  processingOpen.value = false
+  processOrder()
+}
+async function openReceipt() {
+  if (!savedGuest.value?.pdf_token || savingGuest.value) return
+  try {
+    const target = router.resolve({
+      name: 'pedido-invitado-pdf',
+      params: {
+        cliente: String(savedGuest.value.cliente_invitado_id),
+        token: savedGuest.value.pdf_token,
+      },
+    }).href
+    const destination = window.open(target, '_blank')
+    if (!destination) {
+      processError.value =
+        'Tu pedido está guardado. Permite las ventanas emergentes o pulsa «Ver mi pedido» para abrir el comprobante.'
+      return
+    }
+    destination.opener = null
+    destination.focus()
+    processingOpen.value = false
+  } catch {
+    processError.value = 'El pedido está guardado. Pulsa «Ver mi pedido» para abrir su comprobante.'
+  }
+}
+function checkoutFingerprint(customer) {
+  return JSON.stringify({
+    customer,
+    delivery: deliverySelection.value,
+    total: total.value,
+    items: items.value.map((item) => ({
+      id: item.id_producto,
+      cantidad: item.quantity,
+      precio: item.precio_final,
+    })),
+  })
 }
 watch(
   () => currentUser.value?.id,
