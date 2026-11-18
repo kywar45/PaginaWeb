@@ -23,13 +23,15 @@ class GuestOrderController
             }
             $order = $this->service->create(Request::json());
             $order['pdf_token'] = $this->pdfLinks->issue($order['folio_id'], $order['cliente_invitado_id']);
-            if ($this->email) {
+            if ($this->email && \App\Services\GuestOrderEmailService::enabled('ORDER_MAIL_AUTO_ENABLED', true)) {
                 try { $order['email_status'] = $this->email->confirm($order); }
                 catch (\Throwable $error) {
                     // The purchase is committed. Never turn a mail failure into an order failure.
-                    error_log('Guest order confirmation email unavailable for folio ' . (int) $order['folio_id']);
+                    \App\Services\GuestOrderEmailService::log('Queue failure for folio ' . (int) $order['folio_id'] . ' ' . get_class($error) . ' [' . $error->getCode() . '] ' . $error->getMessage());
                     $order['email_status'] = 'pending';
                 }
+            } else {
+                $order['email_status'] = 'disabled';
             }
             return Response::success($order, 200);
         } catch (ApiException $error) {

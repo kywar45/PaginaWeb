@@ -1,6 +1,11 @@
 <?php
 namespace App\Services {
     function mail($recipient, $subject, $html, $headers) {
+        if (($GLOBALS['mail_mode'] ?? '') === 'throw') throw new \RuntimeException('Simulated provider failure');
+        if (($GLOBALS['mail_mode'] ?? '') === 'reject') {
+            trigger_error('Simulated hosting warning', E_USER_WARNING);
+            return false;
+        }
         $GLOBALS['captured_mail'][] = array($recipient, $subject, $html, $headers);
         return true;
     }
@@ -26,5 +31,16 @@ namespace {
     putenv("ORDER_MAIL_FROM=sender@example.com\r\nBcc: other@example.com");
     check($send->invoke($service, 'guest@example.com', 'Pedido', 'body') === false, 'Header injection rejected');
     check(count($GLOBALS['captured_mail']) === 1, 'Disabled or invalid configuration does not send');
+    putenv('ORDER_MAIL_FROM');
+    $_ENV['ORDER_MAIL_FROM'] = 'configured@example.com';
+    check($send->invoke($service, 'guest@example.com', 'Pedido', 'body'), 'Reads private dotenv configuration, not only getenv');
+    check(strpos($GLOBALS['captured_mail'][1][3], 'configured@example.com') !== false, 'Configured sender is actually used');
+    unset($_ENV['ORDER_MAIL_FROM']);
+    $diagnostic = $reflection->getProperty('diagnostic');
+    $diagnostic->setAccessible(true);
+    $GLOBALS['mail_mode'] = 'reject';
+    check(!$send->invoke($service, 'guest@example.com', 'Pedido', 'body') && $diagnostic->getValue($service)['code'] === 'MAIL_REJECTED', 'Warnings are captured and rejection remains visible');
+    $GLOBALS['mail_mode'] = 'throw';
+    check(!$send->invoke($service, 'guest@example.com', 'Pedido', 'body') && $diagnostic->getValue($service)['code'] === 'MAIL_EXCEPTION', 'Provider exception becomes a diagnostic');
     echo "Order mail transport checks passed: default sender, HTML, UTF-8 subject and disable switch.\n";
 }

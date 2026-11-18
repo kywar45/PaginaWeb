@@ -14,6 +14,34 @@ function customerPayload(customer) {
   }
 }
 
+export async function sendOrderEmailTest(customer, { signal } = {}) {
+  const base = (import.meta.env.VITE_STORE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')
+  const response = await fetch(`${base}/checkout/invitado/correo/prueba`, {
+    method: 'POST',
+    credentials: 'include',
+    cache: 'no-store',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nombre: customer.nombre, correo: customer.correo }),
+    signal,
+  })
+  const payload = await response.json().catch(() => null)
+  if (!response.ok || payload?.success !== true) {
+    throw new Error(
+      payload?.error?.message ||
+        `No pudimos ejecutar la prueba de correo (HTTP ${response.status}).`,
+    )
+  }
+  const result = payload.data
+  if (
+    typeof result?.accepted !== 'boolean' ||
+    typeof result.code !== 'string' ||
+    typeof result.message !== 'string'
+  ) {
+    throw new Error('La API devolvió un diagnóstico de correo inválido.')
+  }
+  return result
+}
+
 export async function registerGuestCustomer(customer, { signal } = {}) {
   const base = (import.meta.env.VITE_STORE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/+$/, '')
   const response = await fetch(`${base}/checkout/invitado`, {

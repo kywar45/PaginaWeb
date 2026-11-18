@@ -84,7 +84,7 @@
             label="Procesar pedido"
             icon-right="arrow_forward"
             :loading="validating"
-            :disable="cartBusy || readyToProcess"
+            :disable="cartBusy || readyToProcess || emailTesting"
             @click="processOrder"
           />
           <q-btn
@@ -96,6 +96,12 @@
             label="Ver mi pedido"
             class="checkout-process-button"
             @click="openReceipt"
+          />
+          <OrderMailTestPanel
+            class="checkout-mail-test"
+            :customer="guestDetails"
+            :disabled="savingGuest || validating || cartBusy"
+            @busy-change="emailTesting = $event"
           />
         </template>
       </aside>
@@ -115,6 +121,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import OrderMailTestPanel from 'src/components/OrderMailTestPanel.vue'
 import OrderProcessingDialog from 'src/components/OrderProcessingDialog.vue'
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import GuestCheckoutForm from 'src/components/GuestCheckoutForm.vue'
@@ -139,6 +146,7 @@ const savedGuest = ref(null)
 const processingOpen = ref(false)
 const processingState = ref('processing')
 const router = useRouter()
+const emailTesting = ref(false)
 onBeforeRouteLeave(() => !savingGuest.value)
 let guestRequest
 let disposed = false
@@ -152,7 +160,7 @@ watch(
 )
 
 async function processOrder() {
-  if (validating.value || cartBusy.value || currentUser.value) return
+  if (validating.value || cartBusy.value || currentUser.value || emailTesting.value) return
   validating.value = true
   processError.value = ''
   readyToProcess.value = false
@@ -329,6 +337,9 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 20px;
   min-width: 0;
+}
+.checkout-mail-test {
+  margin-top: 16px;
 }
 .checkout-summary {
   min-width: 0;

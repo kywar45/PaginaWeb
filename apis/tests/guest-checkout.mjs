@@ -7,7 +7,7 @@ let requested
 const previousFetch = globalThis.fetch
 const apiSource = readFileSync(new URL('../../src/services/checkoutApi.js', import.meta.url), 'utf8')
   .replaceAll('import.meta.env.VITE_STORE_API_BASE_URL', "'https://store.example/v1'")
-const { registerGuestCustomer, createGuestFolio, getGuestOrderPdf } = await import(`data:text/javascript;base64,${Buffer.from(apiSource).toString('base64')}`)
+const { registerGuestCustomer, createGuestFolio, getGuestOrderPdf, sendOrderEmailTest } = await import(`data:text/javascript;base64,${Buffer.from(apiSource).toString('base64')}`)
 globalThis.fetch = async (url, options) => {
   requested = { url, ...options }
   return { ok: true, json: async () => ({ success: true, data: { cliente_invitado_id: 42 } }) }
@@ -22,6 +22,13 @@ try {
   assert.equal(body.id, undefined)
   assert.equal(body.precio, undefined)
   assert.equal(Object.keys(body).length, 9)
+  globalThis.fetch = async (url, options) => {
+    requested = { url, ...options }
+    return { ok: true, json: async () => ({ success: true, data: { accepted: false, code: 'MAIL_REJECTED', message: 'Rejected' } }) }
+  }
+  assert.equal((await sendOrderEmailTest({ ...customer, correo: 'test@example.com' })).accepted, false)
+  assert.equal(requested.url, 'https://store.example/v1/checkout/invitado/correo/prueba')
+  assert.deepEqual(JSON.parse(requested.body), { nombre: customer.nombre, correo: 'test@example.com' }, 'Probe sends only contact fields, never identities or an order')
   globalThis.fetch = async (url, options) => {
     requested = { url, ...options }
     return { ok: true, json: async () => ({ success: true, data: { cliente_invitado_id: 42, folio_id: 99, orden: 'INV-42', productos_registrados: 2, pdf_token: 'p1.' + 'A'.repeat(54) } }) }
@@ -65,6 +72,7 @@ const popupWindows = []
 const openedReceipts = []
 let blockPopups = false
 const context = vm.createContext({
+  computed: getter => ({ get value() { return getter() } }), useRoute: () => ({ query: {} }),
   ref, watch: () => {}, onMounted: () => {}, onBeforeUnmount: callback => { removeHook = callback },
   nextTick: async () => {}, emptyGuestDetails, normalizeGuestDetails,
   useRouter: () => ({ resolve: destination => { destinations.push(destination); return { href: '/pedido/invitado/42/pdf' } }, push: () => { throw new Error('Checkout must not navigate away') } }),
@@ -82,7 +90,7 @@ const context = vm.createContext({
   AbortController, setTimeout, clearTimeout,
   createGuestFolio: async () => { calls++; if (fail) throw new Error('Guardado fallido'); if (hold) await hold; return { cliente_invitado_id: 42, folio_id: 99, orden: 'INV-42', productos_registrados: 2, pdf_token: 'p1.' + 'A'.repeat(54) } },
 })
-vm.runInContext(source + '\nglobalThis.api = { guestDetails, guestForm, deliveryForm, processOrder, processError, readyToProcess, validating, savingGuest, savedGuest, processingOpen, processingState, openReceipt };', context)
+vm.runInContext(source + '\nglobalThis.api = { guestDetails, guestForm, deliveryForm, processOrder, processError, readyToProcess, validating, savingGuest, savedGuest, processingOpen, processingState, openReceipt, emailTesting };', context)
 const api = context.api
 api.guestForm.value = { validate: async () => false }
 api.deliveryForm.value = { validate: () => true }
@@ -95,6 +103,10 @@ api.deliveryForm.value.validate = () => false
 await api.processOrder()
 assert.equal(calls, 0, 'Missing delivery must not reach server')
 api.deliveryForm.value.validate = () => true
+api.emailTesting.value = true
+await api.processOrder()
+assert.equal(calls, 0, 'Manual mail probe cannot run alongside order creation')
+api.emailTesting.value = false
 await Promise.all([api.processOrder(), api.processOrder()])
 assert.equal(calls, 1, 'Concurrent clicks send one request')
 assert.equal(api.readyToProcess.value, true)

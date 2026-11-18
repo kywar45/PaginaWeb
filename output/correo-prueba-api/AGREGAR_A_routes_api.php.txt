@@ -1,0 +1,9 @@
+﻿Agregar dentro de return function (Router $router): void { ... }
+No reemplazar el archivo completo ni duplicar la ruta si ya existe.
+
+$router->post('/v1/checkout/invitado/correo/prueba', function (): void {
+    $pdo = Connection::get();
+    (new \App\Controllers\OrderMailTestController(
+        new \App\Services\GuestOrderEmailService($pdo)
+    ))->send();
+});

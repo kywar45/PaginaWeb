@@ -4,6 +4,10 @@ if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 $bootstrap = $argv[1] ?? '';
 if (!$bootstrap || !is_file($bootstrap)) { fwrite(STDERR, "Usage: php send-order-emails.php /absolute/path/to/StoreApi/bootstrap.php\n"); exit(1); }
 require $bootstrap;
+if (!\App\Services\GuestOrderEmailService::enabled('ORDER_MAIL_AUTO_ENABLED', true)) {
+    fwrite(STDOUT, "Automatic order email is disabled (ORDER_MAIL_AUTO_ENABLED).\n");
+    exit(0);
+}
 $pdo = \App\Database\Connection::get();
 $service = new \App\Services\GuestOrderEmailService($pdo);
 // Recover confirmations not queued because an earlier notification step failed.

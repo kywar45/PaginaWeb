@@ -70,6 +70,10 @@ use App\Services\BranchService;
 
 
 return function (Router $router): void {
+    $router->post('/v1/checkout/invitado/correo/prueba', function (): void {
+        $pdo = Connection::get();
+        (new \App\Controllers\OrderMailTestController(new \App\Services\GuestOrderEmailService($pdo)))->send();
+    });
     $router->get('/v1/checkout/invitado/correo/pdf', function (): void {
         $pdo = Connection::get();
         (new GuestOrderPdfController(new OrderPdfService(new OrderPdfRepository($pdo))))
