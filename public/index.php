@@ -17,7 +17,7 @@ if (preg_match('~^/producto/([0-9]+)(?:/[^/]*)?/?$~D', $path, $match)) {
     $result = $id === false ? array('status' => 404) : SupernovaPageMetadata::fetchProduct($id);
     $status = $result['status'];
     $product = $result['product'] ?? null;
-} elseif (!preg_match('~^/(?:|ofertas|mas-vendidos|nuevos|categorias|sucursales|buscar|carrito|checkout|login|register|panel|subcategoria|marcas(?:/[0-9]+)?|catalogo/[^/]+(?:/[^/]+)?|pedido/(?:[^/]+|invitado/[0-9]+/[^/]+)/pdf)/?$~D', $path)) {
+} elseif (!preg_match('~^/(?:|ofertas|mas-vendidos|nuevos|sucursales|buscar|carrito|checkout|login|register|panel|subcategoria|marcas(?:/[0-9]+)?|catalogo/[^/]+(?:/[^/]+)?|pedido/completado|pedido/(?:[^/]+|invitado/[0-9]+/[^/]+)/pdf)/?$~D', $path)) {
     $status = 404;
 }
 $meta = SupernovaPageMetadata::build($path, $homeUrl, $product, $status);

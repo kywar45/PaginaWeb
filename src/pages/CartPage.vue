@@ -10,8 +10,18 @@
         <q-btn flat no-caps label="Actualizar carrito" :disable="busy" @click="refreshCart" />
       </template>
     </q-banner>
-    <q-linear-progress v-if="busy && !refreshing" indeterminate color="primary" aria-label="Guardando carrito" />
-    <LoadingSkeleton v-if="refreshing" variant="cart" :count="3" label="Cargando carrito y precios..." />
+    <q-linear-progress
+      v-if="busy && !refreshing"
+      indeterminate
+      color="primary"
+      aria-label="Guardando carrito"
+    />
+    <LoadingSkeleton
+      v-if="refreshing"
+      variant="cart"
+      :count="3"
+      label="Cargando carrito y precios..."
+    />
     <div v-else-if="refreshError" class="cart-empty" role="alert">
       <p>No se pudieron actualizar los precios.</p>
       <q-btn no-caps color="primary" label="Reintentar" @click="refreshCart" />
@@ -19,13 +29,22 @@
     <div v-else-if="!items.length" class="cart-empty">
       <q-icon name="shopping_bag" size="48px" />
       <p>Tu carrito está vacío.</p>
-      <q-btn no-caps color="primary" unelevated label="Explorar productos" to="/categorias" />
+      <q-btn no-caps color="primary" unelevated label="Explorar productos" to="/" />
     </div>
     <div v-else class="cart-layout" :style="{ '--cart-summary-top': `${summaryOffset}px` }">
       <div class="cart-items">
-        <article v-for="item in items" :key="item.id_producto" class="cart-item" :class="{ 'cart-item--unavailable': !item.puede_comprar }">
+        <article
+          v-for="item in items"
+          :key="item.id_producto"
+          class="cart-item"
+          :class="{ 'cart-item--unavailable': !item.puede_comprar }"
+        >
           <RouterLink :to="productLocation(item)"
-            ><img v-image-skeleton :src="item.imagen || fallback" :alt="item.nombre" @error="imageFailed"
+            ><img
+              v-image-skeleton
+              :src="item.imagen || fallback"
+              :alt="item.nombre"
+              @error="imageFailed"
           /></RouterLink>
           <div class="cart-item__details">
             <RouterLink :to="productLocation(item)">{{ item.nombre }}</RouterLink>
@@ -34,8 +53,12 @@
               <ProductBadge :product="item" />
             </div>
             <div class="cart-item__price">
-              <del v-if="item.tiene_descuento && item.precio_normal > item.precio_final">{{ money(item.precio_normal) }}</del>
-              <strong :class="{ 'cart-item__sale-price': item.tiene_descuento }">{{ money(item.precio_final) }}</strong>
+              <del v-if="item.tiene_descuento && item.precio_normal > item.precio_final">{{
+                money(item.precio_normal)
+              }}</del>
+              <strong :class="{ 'cart-item__sale-price': item.tiene_descuento }">{{
+                money(item.precio_final)
+              }}</strong>
               <span>/ pieza</span>
             </div>
             <small v-if="!item.puede_comprar">No disponible. No se incluye en el total.</small>
@@ -69,7 +92,9 @@
                 round
                 dense
                 icon="add"
-                :disable="busy || item.puede_comprar === false || item.quantity >= MAX_CART_QUANTITY"
+                :disable="
+                  busy || item.puede_comprar === false || item.quantity >= MAX_CART_QUANTITY
+                "
                 :aria-label="`Añadir una pieza de ${item.nombre}`"
                 @click="changeQuantity(item.id_producto, item.quantity + 1)"
               />
@@ -85,24 +110,52 @@
               :aria-label="`Eliminar ${item.nombre}`"
               @click="deleteProduct(item.id_producto)"
             />
-            <strong :class="{ 'cart-item__sale-price': item.tiene_descuento }">{{ money(item.subtotal) }}</strong>
+            <strong :class="{ 'cart-item__sale-price': item.tiene_descuento }">{{
+              money(item.subtotal)
+            }}</strong>
           </div>
         </article>
       </div>
       <div class="cart-total" role="status" aria-label="Total del carrito" :aria-busy="busy">
         <div class="cart-summary-desktop">
           <h2>Resumen de tu compra</h2>
-          <div class="cart-summary-desktop__row"><span>Productos</span><strong>{{ items.length }}</strong></div>
-          <div class="cart-summary-desktop__row"><span>Piezas</span><strong>{{ cartCount }}</strong></div>
-          <div v-if="savings > 0" class="cart-summary-desktop__savings"><span><q-icon name="savings" aria-hidden="true" /> Tu ahorro</span><strong>{{ money(savings) }}</strong></div>
-          <div class="cart-summary-desktop__total"><span>Total de tu compra</span><div><q-spinner v-if="busy" size="18px" aria-label="Actualizando total" /><strong>{{ money(total) }}</strong></div></div>
-          <q-btn unelevated no-caps label="Continuar con mi pedido" icon-right="arrow_forward" to="/checkout" class="cart-summary-desktop__continue" :disable="busy || total <= 0" />
+          <div class="cart-summary-desktop__row">
+            <span>Productos</span><strong>{{ items.length }}</strong>
+          </div>
+          <div class="cart-summary-desktop__row">
+            <span>Piezas</span><strong>{{ cartCount }}</strong>
+          </div>
+          <div v-if="savings > 0" class="cart-summary-desktop__savings">
+            <span><q-icon name="savings" aria-hidden="true" /> Tu ahorro</span
+            ><strong>{{ money(savings) }}</strong>
+          </div>
+          <div class="cart-summary-desktop__total">
+            <span>Total de tu compra</span>
+            <div>
+              <q-spinner v-if="busy" size="18px" aria-label="Actualizando total" /><strong>{{
+                money(total)
+              }}</strong>
+            </div>
+          </div>
+          <q-btn
+            unelevated
+            no-caps
+            label="Continuar con mi pedido"
+            icon-right="arrow_forward"
+            class="cart-summary-desktop__continue"
+            :disable="busy || total <= 0"
+            :loading="checkingSession"
+            @click="continueOrder"
+          />
         </div>
         <div class="cart-summary-mobile">
           <div class="cart-summary-mobile__heading">
             <div>
               <span class="cart-summary-mobile__label">Total de tu compra</span>
-              <p>{{ items.length }} {{ items.length === 1 ? 'producto' : 'productos' }} · {{ cartCount }} {{ cartCount === 1 ? 'pieza' : 'piezas' }}</p>
+              <p>
+                {{ items.length }} {{ items.length === 1 ? 'producto' : 'productos' }} ·
+                {{ cartCount }} {{ cartCount === 1 ? 'pieza' : 'piezas' }}
+              </p>
             </div>
             <div class="cart-summary-mobile__amount">
               <q-spinner v-if="busy" size="16px" aria-label="Actualizando total" />
@@ -113,10 +166,54 @@
             <span><q-icon name="savings" aria-hidden="true" /> Estás ahorrando</span>
             <strong>{{ money(savings) }}</strong>
           </div>
-          <q-btn unelevated no-caps label="Continuar con mi pedido" icon-right="arrow_forward" to="/checkout" class="cart-summary-mobile__continue" :disable="busy || total <= 0" />
+          <q-btn
+            unelevated
+            no-caps
+            label="Continuar con mi pedido"
+            icon-right="arrow_forward"
+            class="cart-summary-mobile__continue"
+            :disable="busy || total <= 0"
+            :loading="checkingSession"
+            @click="continueOrder"
+          />
         </div>
       </div>
     </div>
+    <q-dialog v-model="guestPrompt">
+      <q-card class="cart-guest-prompt" aria-labelledby="cart-guest-title">
+        <q-btn
+          v-close-popup
+          flat
+          round
+          dense
+          icon="close"
+          class="cart-guest-prompt__close"
+          aria-label="Cerrar aviso"
+        />
+        <div class="cart-guest-prompt__icon"><q-icon name="person_outline" /></div>
+        <h2 id="cart-guest-title">¿Cómo quieres continuar?</h2>
+        <p>Estás por hacer un pedido sin iniciar sesión en tu cuenta.</p>
+        <p>
+          Si ya tienes una cuenta, inicia sesión para continuar con tus productos. También puedes
+          comprar como invitado, sin registrarte.
+        </p>
+        <q-btn
+          unelevated
+          no-caps
+          color="primary"
+          icon="login"
+          label="Iniciar sesión y continuar"
+          @click="loginForCheckout"
+        />
+        <q-btn
+          outline
+          no-caps
+          color="primary"
+          label="Continuar como invitado"
+          @click="continueAsGuest"
+        />
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -124,12 +221,36 @@
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import ProductBadge from 'src/components/ProductBadge.vue'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthSession } from 'src/services/authSession'
 import { useCart, MAX_CART_QUANTITY } from 'src/services/cart'
 import { productLocation } from 'src/utils/productRoutes'
 import { publicAsset } from 'src/utils/publicAsset'
 const { items, cartCount, total, savings, busy, setQuantity, removeProduct, loadCart } = useCart()
 const { loadCurrentUser } = useAuthSession()
+const router = useRouter()
+const guestPrompt = ref(false)
+const checkingSession = ref(false)
+
+async function continueOrder() {
+  if (checkingSession.value || busy.value || total.value <= 0 || !items.value.length) return
+  checkingSession.value = true
+  try {
+    const user = await loadCurrentUser({ force: true })
+    if (user) await router.push('/checkout')
+    else guestPrompt.value = true
+  } finally {
+    checkingSession.value = false
+  }
+}
+function loginForCheckout() {
+  guestPrompt.value = false
+  router.push({ path: '/login', query: { next: '/checkout' } })
+}
+function continueAsGuest() {
+  guestPrompt.value = false
+  router.push('/checkout')
+}
 const refreshing = ref(true)
 const refreshError = ref(false)
 const mutationError = ref('')
@@ -138,7 +259,9 @@ const summaryOffset = ref(180)
 let headerObserver
 onMounted(() => {
   const header = document.querySelector('.sn-header')
-  const updateOffset = () => { summaryOffset.value = (header?.getBoundingClientRect().height || 0) + 16 }
+  const updateOffset = () => {
+    summaryOffset.value = (header?.getBoundingClientRect().height || 0) + 16
+  }
   updateOffset()
   if (header) {
     headerObserver = new ResizeObserver(updateOffset)
@@ -151,7 +274,12 @@ async function commitQuantity(item) {
   if (draft === undefined) return
   const value = String(draft).trim()
   const quantity = Number(value)
-  if (!/^[0-9]+$/.test(value) || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > MAX_CART_QUANTITY) {
+  if (
+    !/^[0-9]+$/.test(value) ||
+    !Number.isSafeInteger(quantity) ||
+    quantity < 1 ||
+    quantity > MAX_CART_QUANTITY
+  ) {
     mutationError.value = `Ingresa una cantidad entre 1 y ${MAX_CART_QUANTITY} piezas.`
     delete quantityDrafts.value[item.id_producto]
     return
@@ -183,13 +311,19 @@ async function refreshCart() {
 async function changeQuantity(id, quantity) {
   if (busy.value) return
   mutationError.value = ''
-  try { await setQuantity(id, quantity) }
-  catch (error) { mutationError.value = error.message }
+  try {
+    await setQuantity(id, quantity)
+  } catch (error) {
+    mutationError.value = error.message
+  }
 }
 async function deleteProduct(id) {
   mutationError.value = ''
-  try { await removeProduct(id) }
-  catch (error) { mutationError.value = error.message }
+  try {
+    await removeProduct(id)
+  } catch (error) {
+    mutationError.value = error.message
+  }
 }
 onMounted(refreshCart)
 const fallback = publicAsset('img/product-no-image.svg')
@@ -201,6 +335,50 @@ function imageFailed(event) {
 </script>
 
 <style scoped>
+.cart-guest-prompt {
+  position: relative;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  padding: 28px 24px 24px;
+  border-radius: 20px;
+  text-align: center;
+}
+.cart-guest-prompt__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #8b8189;
+}
+.cart-guest-prompt__icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #fff0f5;
+  color: #ed326b;
+  font-size: 32px;
+}
+.cart-guest-prompt h2 {
+  margin: 0 0 14px;
+  color: #30343b;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.cart-guest-prompt p {
+  margin: 0 0 14px;
+  color: #77717b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.cart-guest-prompt > .q-btn:not(.cart-guest-prompt__close) {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  border-radius: 10px;
+}
 .cart-feedback {
   margin-bottom: 16px;
   background: #fff1f6;
@@ -327,8 +505,14 @@ function imageFailed(event) {
   font-size: 16px;
   text-align: center;
 }
-.cart-item__quantity-input:focus-visible { outline: 2px solid #df2f61; outline-offset: -2px; background: #fff; }
-.cart-item__quantity-input:disabled { opacity: .65; }
+.cart-item__quantity-input:focus-visible {
+  outline: 2px solid #df2f61;
+  outline-offset: -2px;
+  background: #fff;
+}
+.cart-item__quantity-input:disabled {
+  opacity: 0.65;
+}
 .cart-item__end {
   display: flex;
   flex-direction: column;
@@ -370,12 +554,26 @@ function imageFailed(event) {
   color: #df2f61;
   font-size: 24px;
 }
-.cart-summary-mobile { display: none; }
-.cart-summary-desktop { display: none; }
+.cart-summary-mobile {
+  display: none;
+}
+.cart-summary-desktop {
+  display: none;
+}
 @media (min-width: 1024px) {
-  .cart-page { max-width: 1280px; padding-bottom: 48px; }
-  .cart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; gap: 24px; }
-  .cart-items { min-width: 0; }
+  .cart-page {
+    max-width: 1280px;
+    padding-bottom: 48px;
+  }
+  .cart-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+    gap: 24px;
+  }
+  .cart-items {
+    min-width: 0;
+  }
   .cart-total {
     position: sticky;
     top: var(--cart-summary-top);
@@ -395,19 +593,89 @@ function imageFailed(event) {
     background: #fff;
     box-shadow: 0 6px 24px #54314009;
   }
-  .cart-summary-desktop { display: block; }
-  .cart-summary-desktop h2 { margin: 0 0 24px; color: #412536; font-size: 19px; font-weight: 700; line-height: 1.3; }
-  .cart-summary-desktop__row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; color: #8a7280; font-size: 13px; }
-  .cart-summary-desktop__row strong { color: #59414e; font-size: 14px; font-weight: 600; }
-  .cart-summary-desktop__savings { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 20px; padding: 11px; border-radius: 9px; background: #ecf8f0; color: #177345; font-size: 12px; }
-  .cart-summary-desktop__savings > span { display: flex; align-items: center; gap: 6px; }
-  .cart-summary-desktop__savings strong { color: inherit; font-size: 15px; white-space: nowrap; }
-  .cart-summary-desktop__total { margin-top: 22px; padding-top: 20px; border-top: 1px solid #f1e5eb; }
-  .cart-summary-desktop__total > span { color: #8a7280; font-size: 12px; }
-  .cart-summary-desktop__total > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 5px; }
-  .cart-summary-desktop__total strong { color: #412536; font-size: 30px; font-weight: 800; line-height: 1.3; letter-spacing: -.03em; overflow-wrap: anywhere; }
-  .cart-summary-desktop__continue { width: 100%; min-height: 46px; margin-top: 22px; border-radius: 10px; background: linear-gradient(110deg, #ff4f79, #e72e65); color: #fff; font-size: 12px; font-weight: 700; }
-  .cart-summary-desktop__continue :deep(.q-icon) { font-size: 18px; }
+  .cart-summary-desktop {
+    display: block;
+  }
+  .cart-summary-desktop h2 {
+    margin: 0 0 24px;
+    color: #412536;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .cart-summary-desktop__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    color: #8a7280;
+    font-size: 13px;
+  }
+  .cart-summary-desktop__row strong {
+    color: #59414e;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .cart-summary-desktop__savings {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 11px;
+    border-radius: 9px;
+    background: #ecf8f0;
+    color: #177345;
+    font-size: 12px;
+  }
+  .cart-summary-desktop__savings > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cart-summary-desktop__savings strong {
+    color: inherit;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+  .cart-summary-desktop__total {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid #f1e5eb;
+  }
+  .cart-summary-desktop__total > span {
+    color: #8a7280;
+    font-size: 12px;
+  }
+  .cart-summary-desktop__total > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+  }
+  .cart-summary-desktop__total strong {
+    color: #412536;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1.3;
+    letter-spacing: -0.03em;
+    overflow-wrap: anywhere;
+  }
+  .cart-summary-desktop__continue {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 22px;
+    border-radius: 10px;
+    background: linear-gradient(110deg, #ff4f79, #e72e65);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .cart-summary-desktop__continue :deep(.q-icon) {
+    font-size: 18px;
+  }
 }
 @media (max-width: 1023px) {
   .cart-page {
@@ -424,20 +692,86 @@ function imageFailed(event) {
     background: #fff;
     box-shadow: 0 8px 32px rgba(88, 36, 57, 0.16);
   }
-  .cart-total__desktop { display: none !important; }
-  .cart-summary-mobile { display: block; width: 100%; padding: 15px; }
-  .cart-summary-mobile__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .cart-summary-mobile__heading > div:first-child { min-width: 0; }
-  .cart-summary-mobile__label { color: #8a7280; font-size: 11px; line-height: 1.4; }
-  .cart-summary-mobile__heading p { margin: 3px 0 0; color: #654655; font-size: 12px; line-height: 1.4; }
-  .cart-summary-mobile__amount { display: flex; flex-shrink: 0; align-items: center; gap: 6px; }
-  .cart-summary-mobile__amount strong { color: #412536; font-size: clamp(19px, 5.5vw, 24px); font-weight: 800; letter-spacing: -0.03em; white-space: nowrap; }
-  .cart-summary-mobile__savings { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 9px 11px; border-radius: 10px; background: #ecf8f0; color: #177345; }
-  .cart-summary-mobile__savings > span { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-  .cart-summary-mobile__savings .q-icon { font-size: 17px; }
-  .cart-summary-mobile__savings strong { color: #177345; font-size: 15px; font-weight: 700; white-space: nowrap; }
-  .cart-summary-mobile__continue { width: 100%; min-height: 44px; margin-top: 12px; border-radius: 12px; background: linear-gradient(110deg, #ff4f79, #e72e65); color: #fff; font-size: 13px; font-weight: 700; }
-  .cart-summary-mobile__continue :deep(.q-icon) { font-size: 18px; }
+  .cart-total__desktop {
+    display: none !important;
+  }
+  .cart-summary-mobile {
+    display: block;
+    width: 100%;
+    padding: 15px;
+  }
+  .cart-summary-mobile__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .cart-summary-mobile__heading > div:first-child {
+    min-width: 0;
+  }
+  .cart-summary-mobile__label {
+    color: #8a7280;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .cart-summary-mobile__heading p {
+    margin: 3px 0 0;
+    color: #654655;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .cart-summary-mobile__amount {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+  }
+  .cart-summary-mobile__amount strong {
+    color: #412536;
+    font-size: clamp(19px, 5.5vw, 24px);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+  }
+  .cart-summary-mobile__savings {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    background: #ecf8f0;
+    color: #177345;
+  }
+  .cart-summary-mobile__savings > span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .cart-summary-mobile__savings .q-icon {
+    font-size: 17px;
+  }
+  .cart-summary-mobile__savings strong {
+    color: #177345;
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .cart-summary-mobile__continue {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 12px;
+    border-radius: 12px;
+    background: linear-gradient(110deg, #ff4f79, #e72e65);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .cart-summary-mobile__continue :deep(.q-icon) {
+    font-size: 18px;
+  }
 }
 @media (max-width: 599px) {
   .cart-page {
@@ -450,7 +784,9 @@ function imageFailed(event) {
     padding: 8px;
     border-radius: 12px;
   }
-  .cart-items { gap: 8px; }
+  .cart-items {
+    gap: 8px;
+  }
   .cart-item > a {
     grid-column: 1;
     grid-row: 1 / 3;
@@ -462,7 +798,10 @@ function imageFailed(event) {
     width: 44px;
     height: 44px;
   }
-  .cart-item__details, .cart-item__end { display: contents; }
+  .cart-item__details,
+  .cart-item__end {
+    display: contents;
+  }
   .cart-item__details > a {
     grid-column: 2;
     grid-row: 1;
@@ -470,9 +809,19 @@ function imageFailed(event) {
     font-size: 12px;
     line-height: 1.35;
   }
-  .cart-item__meta { grid-column: 2 / -1; grid-row: 2; gap: 3px 6px; }
-  .cart-item__price { grid-column: 2 / -1; grid-row: 3; gap: 4px; }
-  .cart-item__price strong { font-size: 15px; }
+  .cart-item__meta {
+    grid-column: 2 / -1;
+    grid-row: 2;
+    gap: 3px 6px;
+  }
+  .cart-item__price {
+    grid-column: 2 / -1;
+    grid-row: 3;
+    gap: 4px;
+  }
+  .cart-item__price strong {
+    font-size: 15px;
+  }
   .cart-item__quantity {
     grid-column: 1;
     grid-row: 3 / 5;
@@ -483,14 +832,38 @@ function imageFailed(event) {
     border-radius: 8px;
     font-size: 12px;
   }
-  .cart-item__quantity .q-btn { min-width: 28px; min-height: 32px; }
-  .cart-item__quantity :deep(.q-icon) { font-size: 18px; }
-  .cart-item__quantity-input { width: 40px; }
-  .cart-item__end > .q-btn { grid-column: 3; grid-row: 1; justify-self: end; align-self: start; min-width: 28px; min-height: 28px; }
-  .cart-item__end > .q-btn :deep(.q-icon) { font-size: 19px; }
-  .cart-item__details > small { grid-column: 2 / -1; grid-row: 4; font-size: 10px; }
-  .cart-item--unavailable .cart-item__quantity { grid-row: 3 / 6; }
-  .cart-item--unavailable .cart-item__end strong { grid-row: 5; }
+  .cart-item__quantity .q-btn {
+    min-width: 28px;
+    min-height: 32px;
+  }
+  .cart-item__quantity :deep(.q-icon) {
+    font-size: 18px;
+  }
+  .cart-item__quantity-input {
+    width: 40px;
+  }
+  .cart-item__end > .q-btn {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    align-self: start;
+    min-width: 28px;
+    min-height: 28px;
+  }
+  .cart-item__end > .q-btn :deep(.q-icon) {
+    font-size: 19px;
+  }
+  .cart-item__details > small {
+    grid-column: 2 / -1;
+    grid-row: 4;
+    font-size: 10px;
+  }
+  .cart-item--unavailable .cart-item__quantity {
+    grid-row: 3 / 6;
+  }
+  .cart-item--unavailable .cart-item__end strong {
+    grid-row: 5;
+  }
   .cart-item__end strong {
     grid-column: 2 / -1;
     grid-row: 4;

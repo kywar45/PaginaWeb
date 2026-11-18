@@ -1,0 +1,1 @@
+function e(e){let t=String(e.nombre||e.name||`producto`).normalize(`NFD`).replace(/[\u0300-\u036f]/g,``).toLowerCase().replace(/[^a-z0-9]+/g,`-`).replace(/^-+|-+$/g,``)||`producto`;return{name:`producto`,params:{id:String(e.id_producto??e.id),slug:t}}}export{e as t};

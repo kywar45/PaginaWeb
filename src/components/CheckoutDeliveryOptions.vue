@@ -116,6 +116,22 @@
                   ><q-icon name="schedule" aria-hidden="true" />
                   {{ branch.horario_atencion }}</small
                 >
+                <q-btn
+                  v-if="branch.google_maps_url"
+                  tag="a"
+                  :href="branch.google_maps_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  outline
+                  dense
+                  no-caps
+                  color="primary"
+                  icon="location_on"
+                  label="Ver en Maps"
+                  class="checkout-delivery__map"
+                  :aria-label="`Ver ubicación de ${branch.nombre} en Google Maps`"
+                  @click.stop
+                />
               </span>
             </div>
           </div>
@@ -383,6 +399,13 @@ onBeforeUnmount(() => {
 .checkout-delivery__branch small {
   font-size: 11px;
 }
+.checkout-delivery__map {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
 .checkout-delivery__notice {
   display: flex;
   align-items: flex-start;
@@ -422,6 +445,55 @@ onBeforeUnmount(() => {
   }
   .checkout-delivery__choices {
     grid-template-columns: 1fr;
+  }
+  .checkout-delivery__branch-list {
+    gap: 8px;
+  }
+  .checkout-delivery__branch {
+    gap: 3px;
+    padding: 8px 10px 8px 3px;
+    border-radius: 10px;
+  }
+  .checkout-delivery__branch > .q-radio {
+    flex-shrink: 0;
+  }
+  .checkout-delivery__branch :deep(.q-radio__inner) {
+    font-size: 32px;
+  }
+  .checkout-delivery__branch > span {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 6px;
+    padding-top: 3px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .checkout-delivery__branch > span > strong,
+  .checkout-delivery__branch > span > span {
+    grid-column: 1 / -1;
+  }
+  .checkout-delivery__branch strong {
+    font-size: 12px;
+  }
+  .checkout-delivery__branch small {
+    grid-column: 1;
+    grid-row: 3;
+    font-size: 10px;
+  }
+  .checkout-delivery__map {
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 0;
+    padding: 2px 5px;
+    min-height: 28px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .checkout-delivery__map :deep(.q-icon) {
+    font-size: 16px;
+    margin-right: 3px;
   }
 }
 </style>

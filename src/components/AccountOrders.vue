@@ -14,7 +14,7 @@
       <q-icon name="inventory_2" aria-hidden="true" />
       <h3>Aún no tienes pedidos</h3>
       <p>Cuando realices tu primera compra, la encontrarás aquí.</p>
-      <q-btn unelevated no-caps color="primary" label="Explorar productos" to="/categorias" />
+      <q-btn unelevated no-caps color="primary" label="Explorar productos" to="/" />
     </div>
     <template v-else>
       <p class="orders-count" role="status">

@@ -1,0 +1,1 @@
+import{r as e}from"./index-BpMDJ9OV.js";import{t}from"./productRoutes-DVX18aRN.js";function n(){let n=e();return e=>n.push(t(e))}export{n as t};

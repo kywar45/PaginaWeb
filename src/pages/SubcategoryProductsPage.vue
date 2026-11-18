@@ -43,11 +43,9 @@
               @keydown.space.prevent="openProduct(product)"
             >
               <div class="offer-image">
-                <ProductBadge
-                  class="card-sale-badge"
-                  :product="product"
-                />
-                <img v-image-skeleton
+                <ProductBadge class="card-sale-badge" :product="product" />
+                <img
+                  v-image-skeleton
                   :src="product.imagen"
                   :alt="product.nombre"
                   loading="lazy"
@@ -66,7 +64,13 @@
               @update:model-value="changePage"
             />
             <div v-else-if="pagination.total_pages === undefined" class="row q-gutter-sm">
-              <q-btn no-caps icon="chevron_left" aria-label="Página anterior" :disable="page <= 1" @click="changePage(page - 1)" />
+              <q-btn
+                no-caps
+                icon="chevron_left"
+                aria-label="Página anterior"
+                :disable="page <= 1"
+                @click="changePage(page - 1)"
+              />
               <span class="self-center">Página {{ page }}</span>
               <q-btn
                 no-caps
@@ -80,8 +84,6 @@
         </div>
       </div>
     </section>
-
-
   </q-page>
 </template>
 
@@ -112,13 +114,9 @@ const currentTitle = computed(() => subcategory.value?.name || category.value?.n
 const categoryLink = computed(() =>
   subcategory.value && category.value
     ? catalogLocation(category.value, null, 1, categories.value)
-    : {
-        path: '/categorias',
-        query: category.value ? { categoria: String(category.value.id) } : {},
-      },
+    : '/',
 )
 const breadcrumbParents = computed(() => [
-  { label: 'Categorías', to: '/categorias' },
   ...(subcategory.value && category.value
     ? [
         {
@@ -200,7 +198,6 @@ watch(() => route.fullPath, loadProducts, {
 onBeforeUnmount(() => {
   request?.abort()
 })
-
 
 function useFallbackImage(event) {
   const image = event?.target

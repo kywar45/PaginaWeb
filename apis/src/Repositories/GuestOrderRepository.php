@@ -125,6 +125,55 @@ class GuestOrderRepository
         return count($expected);
     }
 
+    public function completed($customerId, $carrierId, $branchId)
+    {
+        $find = $this->pdo->prepare('SELECT f.id, f.orden, f.cantidad, f.total, f.shipping_carrier_id, f.store_pickup,
+            (SELECT COUNT(*) FROM registro_usuario r WHERE r.orden = f.orden AND r.id_cliente_invitado = f.id_cliente_invitado AND r.id_usuario IS NULL) AS product_count,
+            (SELECT SUM(r.cantidad) FROM registro_usuario r WHERE r.orden = f.orden AND r.id_cliente_invitado = f.id_cliente_invitado AND r.id_usuario IS NULL) AS piece_count
+            FROM folios f JOIN web_pedidos_envio e ON e.folio_id = f.id
+            WHERE f.id_cliente_invitado = :cliente AND f.id_usuario IS NULL AND f.orden = :orden');
+        $find->execute(array(':cliente' => $customerId, ':orden' => 'INV-' . $customerId));
+        $row = $find->fetch(\PDO::FETCH_ASSOC);
+        if (!$row) return null;
+        if ((int) $row['shipping_carrier_id'] !== $carrierId
+            || ($row['store_pickup'] === null ? null : (int) $row['store_pickup']) !== $branchId
+            || (int) $row['product_count'] < 1 || (int) $row['piece_count'] !== (int) $row['cantidad']) {
+            throw new ApiException('GUEST_ORDER_CONFLICT', 'El pedido ya registrado tiene datos diferentes. Revisa tu comprobante.', 409);
+        }
+        return array('folio_id' => (int) $row['id'], 'cliente_invitado_id' => $customerId,
+            'orden' => $row['orden'], 'cantidad' => (int) $row['cantidad'], 'total' => (float) $row['total'],
+            'productos_registrados' => (int) $row['product_count'], 'carrito_vaciado' => true);
+    }
+
+    public function saveShipping($folioId, $customerId)
+    {
+        if (!$this->pdo->inTransaction()) throw new \LogicException('Order shipping requires the order transaction');
+        $fields = array('nombre', 'apellido', 'correo', 'estado', 'ciudad', 'colonia', 'direccion', 'codigo_postal', 'telefono');
+        // Use the validated guest record attached to this order, never a posted customer/folio ID.
+        $source = $this->pdo->prepare('SELECT ' . implode(', ', array_map(function ($field) { return 'c.' . $field; }, $fields)) . '
+            FROM web_clientes_invitados c JOIN folios f ON f.id_cliente_invitado = c.id
+            WHERE f.id = :folio AND c.id = :cliente AND f.id_usuario IS NULL FOR UPDATE');
+        $source->execute(array(':folio' => $folioId, ':cliente' => $customerId));
+        $shipping = $source->fetch(\PDO::FETCH_ASSOC);
+        if (!$shipping) throw new ApiException('ORDER_NOT_FOUND', 'No pudimos relacionar los datos de envío con el pedido.', 409);
+        $find = $this->pdo->prepare('SELECT ' . implode(', ', $fields) . ' FROM web_pedidos_envio WHERE folio_id = :folio FOR UPDATE');
+        $find->execute(array(':folio' => $folioId));
+        $existing = $find->fetch(\PDO::FETCH_ASSOC);
+        if ($existing) {
+            foreach ($fields as $field) {
+                if ($existing[$field] !== $shipping[$field]) {
+                    throw new ApiException('ORDER_SHIPPING_CONFLICT', 'El pedido ya tiene otros datos de envío registrados. Comunícate con soporte.', 409);
+                }
+            }
+            return;
+        }
+        $insert = $this->pdo->prepare('INSERT INTO web_pedidos_envio
+            (folio_id, ' . implode(', ', $fields) . ') VALUES (:folio, :' . implode(', :', $fields) . ')');
+        $params = array(':folio' => $folioId);
+        foreach ($fields as $field) $params[':' . $field] = $shipping[$field];
+        $insert->execute($params);
+    }
+
     public function validateBranch($id)
     {
         $branch = $this->pdo->prepare('SELECT id FROM admin_tiendas WHERE id = :id AND store = 1 AND estatus = 1 FOR UPDATE');

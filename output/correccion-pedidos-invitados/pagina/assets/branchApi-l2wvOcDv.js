@@ -1,0 +1,1 @@
+async function e({signal:e}={}){let t=`https://www.importadorasupernova.com/StoreApi/v1`.replace(/\/+$/,``),n=await fetch(`${t}/sucursales`,{headers:{Accept:`application/json`},signal:e}),r=await n.json();if(!n.ok||r?.success!==!0||!Array.isArray(r.data?.sucursales))throw Error(`No se pudieron cargar las sucursales.`);return r.data.sucursales}export{e as t};

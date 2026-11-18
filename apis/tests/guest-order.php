@@ -77,6 +77,13 @@ CREATE TABLE folios (id INTEGER PRIMARY KEY AUTOINCREMENT, id_usuario INTEGER NU
     vendedora TEXT NOT NULL, pendiente TEXT NOT NULL, venta_paqueteria TEXT NOT NULL, iva TEXT NOT NULL,
     saldo_pendiente TEXT NOT NULL, marca TEXT NOT NULL, empaquetado TEXT NOT NULL, verificado TEXT NOT NULL,
     guia_gratis TEXT NOT NULL, marcado TEXT NOT NULL DEFAULT \'0\', seguro TEXT NOT NULL, id_detalle_orden INTEGER NOT NULL)');
+$pdo->exec('ALTER TABLE web_clientes_invitados ADD COLUMN checkout_request_hash TEXT DEFAULT NULL');
+$pdo->exec('CREATE UNIQUE INDEX uk_guest_checkout_request ON web_clientes_invitados(checkout_request_hash)');
+$pdo->exec('CREATE TABLE web_pedidos_envio (id INTEGER PRIMARY KEY AUTOINCREMENT,
+    folio_id INTEGER NOT NULL UNIQUE REFERENCES folios(id), nombre TEXT NOT NULL, apellido TEXT NOT NULL,
+    correo TEXT NOT NULL, estado TEXT NOT NULL, ciudad TEXT NOT NULL, colonia TEXT NOT NULL,
+    direccion TEXT NOT NULL, codigo_postal TEXT NOT NULL, telefono TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP)');
 $owner = array('user_id' => 0, 'guest_hash' => str_repeat('a', 64));
 $insertCart = $pdo->prepare('INSERT INTO carrito VALUES (?,0,?,?,?, ?,?, ?,1)');
 $insertCart->execute(array(1, $owner['guest_hash'], 1, 'Anterior', 'COD-1', '0.01', 2));
@@ -92,78 +99,64 @@ $data = array('nombre' => 'Ana', 'apellido' => 'Pérez', 'correo' => 'ana@exampl
     'ciudad' => 'Ciudad de México', 'colonia' => 'Centro', 'direccion' => 'Artículo 123 #41', 'codigo_postal' => '06050',
     'telefono' => '5534868537', 'tipo_entrega' => 0, 'shipping_carrier_id' => 8, 'sucursal_id' => 25,
     'id_cliente_invitado' => 999, 'id_usuario' => 23, 'cantidad' => 1, 'total' => '0.01');
+$_COOKIE['sn_guest_cart'] = str_repeat('d', 64);
+$data['request_id'] = str_repeat('a', 32);
+function refill($pdo) { $pdo->exec('UPDATE carrito SET activo = 1 WHERE id IN (1,2)'); }
+function counts($pdo) {
+    return array_map(function ($table) use ($pdo) { return (int) $pdo->query('SELECT COUNT(*) FROM ' . $table)->fetchColumn(); }, array('folios', 'registro_usuario', 'web_pedidos_envio'));
+}
 $result = $service->create($data);
 $folio = $pdo->query('SELECT * FROM folios')->fetch(PDO::FETCH_ASSOC);
-check($folio['id_usuario'] === null && (int) $folio['id_cliente_invitado'] === 1 && $folio['nombres'] === 'Ana Pérez', 'Guest identity and names come from validated persisted customer');
-check($folio['orden'] === 'INV-1' && (int) $folio['shipping_carrier_id'] === 21, 'Personal delivery uses carrier 21, ignoring forged carrier ID');
-check((int) $folio['store_pickup'] === 25, 'Personal delivery stores the selected branch ID');
-check((int) $folio['cantidad'] === 5 && (float) $folio['total'] === 350.0, 'Quantity and fresh prices come only from the guest cart');
-check((int) $folio['order_status_id'] === 1 && $folio['estatus_ventas'] === 'no contactado' && $folio['fecha'], 'Initial status and server timestamp');
-check($service->create($data)['folio_id'] === $result['folio_id'] && (int) $pdo->query('SELECT COUNT(*) FROM folios')->fetchColumn() === 1, 'Retry does not duplicate the reference');
-check((int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 3, 'Neither own nor foreign carts are emptied');
+check($folio['id_usuario'] === null && $folio['nombres'] === 'Ana Pérez', 'Guest identity and name');
+check($folio['orden'] === 'INV-' . $result['cliente_invitado_id'] && (int) $folio['shipping_carrier_id'] === 21, 'Consecutive reference and personal carrier');
+check((int) $folio['store_pickup'] === 25 && (int) $folio['cantidad'] === 5 && (float) $folio['total'] === 350.0, 'Delivery and authoritative cart totals');
+check((int) $folio['order_status_id'] === 1 && $folio['estatus_ventas'] === 'no contactado', 'Initial statuses');
+check($result['carrito_vaciado'] === true && (int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 1, 'Only the purchasing guest cart is emptied');
+check((int) $pdo->query('SELECT activo FROM carrito WHERE id = 3')->fetchColumn() === 1, 'Foreign guest cart remains active');
 $lines = $pdo->query('SELECT * FROM registro_usuario ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
-check(count($lines) === 2 && $result['productos_registrados'] === 2, 'Each product is saved once, including after retries');
-check($lines[0]['id_usuario'] === null && (int) $lines[0]['id_cliente_invitado'] === 1 && $lines[0]['orden'] === 'INV-1', 'Line identity belongs to the guest and folio');
-check((int) $lines[0]['id_producto'] === 1 && $lines[0]['nombre'] === 'Producto 1' && $lines[0]['codigo'] === 'COD-1', 'Product identity comes from server data, not stale browser fields');
-check((float) $lines[0]['precio'] === 100.0 && (int) $lines[0]['cantidad'] === 2 && $lines[0]['fecha'], 'Line price, quantity and timestamp persisted');
-check((float) $lines[1]['precio'] === 50.0 && (int) $lines[1]['cantidad'] === 3, 'Each variant retains its own unit price and quantity');
-check($lines[0]['direcciond'] === '' && $lines[0]['estatus'] === '' && $lines[0]['fecha_procesado'] === null, 'Unrequested legacy fields remain empty');
-check((float) $pdo->query('SELECT SUM(precio * cantidad) FROM registro_usuario')->fetchColumn() === (float) $folio['total'], 'Historical line totals reconcile with folio');
-check((float) $pdo->query('SELECT precio FROM carrito WHERE id = 3')->fetchColumn() === 999.0, 'Foreign guest cart remains untouched');
-$national = array_merge($data, array('nombre' => 'Luis', 'tipo_entrega' => 1, 'shipping_carrier_id' => 8, 'sucursal_id' => null));
-$nationalResult = $service->create($national);
-check($nationalResult['orden'] === 'INV-2' && $nationalResult['total'] === 350, 'National delivery uses selected active carrier');
-check($pdo->query("SELECT store_pickup FROM folios WHERE orden = 'INV-2'")->fetchColumn() === null, 'National shipping stores NULL for pickup');
-rejects(function () use ($service, $national) { $service->create(array_merge($national, array('shipping_carrier_id' => 21))); }, 409);
-rejects(function () use ($service, $national) { $service->create(array_merge($national, array('shipping_carrier_id' => 9))); }, 409);
-rejects(function () use ($service, $data) { $service->create(array_merge($data, array('sucursal_id' => 26))); }, 409);
-rejects(function () use ($service, $data) { $service->create(array_merge($data, array('sucursal_id' => 28))); }, 409);
-rejects(function () use ($service, $data) { $service->create(array_merge($data, array('sucursal_id' => 27))); }, 409);
-check((int) $pdo->query("SELECT store_pickup FROM folios WHERE orden = 'INV-1'")->fetchColumn() === 25, 'Retry with a different branch cannot overwrite the existing folio');
-$pdo->exec("UPDATE registro_usuario SET id_cliente_invitado = 2 WHERE orden = 'INV-1' AND id_producto = 1");
-rejects(function () use ($service, $data) { $service->create($data); }, 409);
-$pdo->exec("UPDATE registro_usuario SET id_cliente_invitado = 1 WHERE orden = 'INV-1' AND id_producto = 1");
-$products->rows[3] = product(3, 50);
-$pdo->exec('UPDATE carrito SET id_producto = 3 WHERE id = 2');
-rejects(function () use ($service, $data) { $service->create($data); }, 409);
-check((int) $pdo->query("SELECT COUNT(*) FROM registro_usuario WHERE orden = 'INV-1' AND id_producto = 2")->fetchColumn() === 1, 'Same-total retry with different products cannot overwrite original lines');
-$pdo->exec('UPDATE carrito SET id_producto = 2 WHERE id = 2');
-$pdo->exec("DELETE FROM registro_usuario WHERE orden = 'INV-1'");
-check($service->create($data)['folio_id'] === $result['folio_id'], 'Step-2 folio without items is completed without duplicating its header');
-check((int) $pdo->query("SELECT COUNT(*) FROM registro_usuario WHERE orden = 'INV-1'")->fetchColumn() === 2, 'Previous empty folio receives its complete product detail');
-$products->rows[1]['nombre'] = str_repeat('x', 251);
-rejects(function () use ($service, $data) { $service->create($data); }, 422);
-$products->rows[1]['nombre'] = 'Producto 1';
-$products->rows[1]['codigo'] = "COD-\xF0\x9F\x92\x85";
-rejects(function () use ($service, $data) { $service->create($data); }, 422);
-$products->rows[1]['codigo'] = 'COD-1';
-$pdo->exec('UPDATE carrito SET cantidad = 4 WHERE id = 1');
-rejects(function () use ($service, $data) { $service->create($data); }, 409);
-check((float) $pdo->query('SELECT total FROM folios WHERE id = 1')->fetchColumn() === 350.0, 'Conflicting retry never overwrites the existing folio');
+check(count($lines) === 2 && (float) $lines[0]['precio'] === 100.0 && (int) $lines[0]['cantidad'] === 2, 'Historical products saved before clearing cart');
+check($lines[0]['id_usuario'] === null && $lines[0]['orden'] === $folio['orden'] && $lines[0]['direcciond'] === '', 'Guest ownership and unchanged legacy fields');
+$shipping = $pdo->query('SELECT * FROM web_pedidos_envio')->fetch(PDO::FETCH_ASSOC);
+check((int) $shipping['folio_id'] === $result['folio_id'] && $shipping['direccion'] === $data['direccion'] && $shipping['correo'] === $data['correo'], 'Shipping snapshot saved');
+check($service->create($data)['folio_id'] === $result['folio_id'] && counts($pdo) === array(1,2,1), 'Lost-response retry succeeds with an empty cart, without duplicates');
+refill($pdo);
+check($service->create($data)['folio_id'] === $result['folio_id'], 'Retry still returns its existing order after new additions');
+check((int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 3, 'Retry never clears products added after the original purchase');
+$second = $service->create(array_merge($data, array('request_id' => str_repeat('b', 32))));
+check($second['cliente_invitado_id'] !== $result['cliente_invitado_id'] && $second['orden'] === 'INV-' . $second['cliente_invitado_id'], 'Identical contact details can place another purchase with consecutive guest ID');
+check(counts($pdo) === array(2,4,2), 'Separate purchases retain separate products and shipping');
+refill($pdo);
+$national = array_merge($data, array('request_id' => str_repeat('c', 32), 'tipo_entrega' => 1, 'shipping_carrier_id' => 8, 'sucursal_id' => null));
+$third = $service->create($national);
+check($third['total'] === 350 && $pdo->query('SELECT store_pickup FROM folios WHERE id = ' . $third['folio_id'])->fetchColumn() === null, 'National shipping retains carrier selection');
+refill($pdo);
+$invalid = array_merge($data, array('request_id' => str_repeat('f', 32)));
+rejects(function () use ($service, $invalid) { $service->create(array_merge($invalid, array('sucursal_id' => 26))); }, 409);
+rejects(function () use ($service, $invalid) { $service->create(array_merge($invalid, array('sucursal_id' => 28))); }, 409);
+rejects(function () use ($service, $invalid) { $service->create(array_merge($invalid, array('tipo_entrega' => 1, 'shipping_carrier_id' => 9))); }, 409);
+check((int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 3, 'Validation failure retains cart');
+$before = counts($pdo);
+$pdo->exec("CREATE TRIGGER fail_shipping BEFORE INSERT ON web_pedidos_envio BEGIN SELECT RAISE(ABORT, 'shipping failure'); END");
+try { $service->create($invalid); throw new RuntimeException('Expected shipping failure'); } catch (PDOException $expected) {}
+check(counts($pdo) === $before && (int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 3, 'Shipping failure rolls back order, products and cart');
+$pdo->exec('DROP TRIGGER fail_shipping');
+$pdo->exec("CREATE TRIGGER fail_clear BEFORE UPDATE OF activo ON carrito WHEN NEW.activo = 0 AND OLD.id = 1 BEGIN SELECT RAISE(ABORT, 'cart failure'); END");
+try { $service->create($invalid); throw new RuntimeException('Expected cart failure'); } catch (PDOException $expected) {}
+check(counts($pdo) === $before && (int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 3, 'Cart clearing failure rolls back the whole purchase');
+check(!$pdo->inTransaction() && !$locks, 'Failure releases locks and transaction');
+$pdo->exec('DROP TRIGGER fail_clear');
+$recovered = $service->create($invalid);
+check($recovered['carrito_vaciado'] === true && (int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 1, 'Failed purchase can retry and finish normally');
+refill($pdo);
 $products->rows[1]['estatus'] = 0;
-rejects(function () use ($service, $data) { $service->create($data); }, 409);
+rejects(function () use ($service, $data) { $service->create(array_merge($data, array('request_id' => str_repeat('e', 32)))); }, 409);
+check((int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 3, 'Unavailable product prevents cart clearing');
 $products->rows[1]['estatus'] = 1;
-$pdo->exec('UPDATE carrito SET activo = 0 WHERE guest_hash = ' . $pdo->quote($owner['guest_hash']));
-rejects(function () use ($service, $data) { $service->create($data); }, 409);
-$pdo->exec('UPDATE carrito SET activo = 1 WHERE guest_hash = ' . $pdo->quote($owner['guest_hash']));
-$priceBeforeFailure = $pdo->query('SELECT precio FROM carrito WHERE id = 1')->fetchColumn();
-$products->rows[1]['preciou'] = 200;
-$pdo->exec("CREATE TRIGGER fail_folio BEFORE INSERT ON folios WHEN NEW.nombres = 'FALLAR Pérez' BEGIN SELECT RAISE(ABORT, 'simulated failure'); END");
-try { $service->create(array_merge($data, array('nombre' => 'FALLAR'))); throw new RuntimeException('Expected SQL failure'); }
-catch (PDOException $expected) {}
-check(!$pdo->inTransaction() && !$locks, 'Failures roll back and release both order and cart locks');
-check($pdo->query('SELECT precio FROM carrito WHERE id = 1')->fetchColumn() === $priceBeforeFailure, 'Failed folio rolls back its cart repricing in the same transaction');
-check((int) $pdo->query('SELECT COUNT(*) FROM folios')->fetchColumn() === 2, 'Storage failure creates no partial folio');
-$pdo->exec("CREATE TRIGGER fail_second_line BEFORE INSERT ON registro_usuario WHEN NEW.id_producto = 2 BEGIN SELECT RAISE(ABORT, 'simulated line failure'); END");
-try { $service->create(array_merge($data, array('nombre' => 'FALLA DETALLE'))); throw new RuntimeException('Expected line failure'); }
-catch (PDOException $expected) {}
-check((int) $pdo->query('SELECT COUNT(*) FROM folios')->fetchColumn() === 2, 'Second-line failure rolls back the newly inserted folio');
-check((int) $pdo->query('SELECT COUNT(*) FROM registro_usuario')->fetchColumn() === 4, 'Second-line failure rolls back the first inserted line');
-check(!$pdo->inTransaction() && !$locks, 'Line failures release order and cart locks');
-check((int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 3, 'Step 3 still preserves all cart rows');
-$pdo->exec('DROP TRIGGER fail_second_line');
-$recovered = $service->create(array_merge($data, array('nombre' => 'FALLA DETALLE')));
-check($recovered['productos_registrados'] === 2, 'A failed write can be retried successfully');
+$pdo->exec("CREATE TRIGGER fail_item BEFORE INSERT ON registro_usuario WHEN NEW.id_producto = 2 BEGIN SELECT RAISE(ABORT, 'item failure'); END");
+$before = counts($pdo);
+try { $service->create(array_merge($data, array('request_id' => str_repeat('e', 32)))); throw new RuntimeException('Expected item failure'); } catch (PDOException $expected) {}
+check(counts($pdo) === $before && (int) $pdo->query('SELECT COUNT(*) FROM carrito WHERE activo = 1')->fetchColumn() === 3, 'Product failure rolls back partial lines and retains cart');
+$pdo->exec('DROP TRIGGER fail_item');
 $auth->user = array('id' => 23);
 rejects(function () use ($service, $data) { $service->create($data); }, 409);
-echo "Guest folio checks passed: real repositories and cart pricing, guest identity, carrier types, statuses, retries, rollback and intact carts.\n";
+echo "Guest order checks passed: complete purchase, shipping, consecutive folios, scoped cart clearing, lost-response retries and full rollback.\n";

@@ -3,7 +3,8 @@
     <section class="login-shell">
       <aside class="login-brand gt-xs">
         <div class="login-brand__content">
-          <img v-image-skeleton
+          <img
+            v-image-skeleton
             :src="publicAsset('img/logob.png')"
             alt="Importadora Supernova"
             class="login-brand__logo"
@@ -38,6 +39,9 @@
         </div>
 
         <q-form greedy class="login-form" @submit.prevent="submitLogin">
+          <p v-if="checkoutReturn" class="login-checkout-note">
+            Inicia sesión para continuar tu compra. Tus productos se conservarán en tu carrito.
+          </p>
           <q-input
             v-model.trim="email"
             label="Correo electrónico"
@@ -130,13 +134,16 @@
 <script setup>
 import { publicAsset } from 'src/utils/publicAsset'
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import authApi from 'src/services/authApi'
 import { useAuthSession } from 'src/services/authSession'
 import { useCart } from 'src/services/cart'
 
 const router = useRouter()
+const route = useRoute()
+// Only accept this known internal destination; never follow arbitrary redirect URLs.
+const checkoutReturn = computed(() => route.query.next === '/checkout')
 const { loadCurrentUser, setCurrentUser } = useAuthSession()
 const { setMergeNotice } = useCart()
 
@@ -151,7 +158,7 @@ onMounted(async () => {
   const user = await loadCurrentUser()
 
   if (user) {
-    router.replace('/panel')
+    router.replace(checkoutReturn.value ? '/checkout' : '/panel')
   }
 })
 
@@ -180,7 +187,9 @@ async function submitLogin() {
 
     setCurrentUser(data?.usuario)
     setMergeNotice(data?.carrito_fusion)
-    router.push('/')
+    await router.replace(
+      checkoutReturn.value ? (data?.carrito_fusion?.pendiente ? '/carrito' : '/checkout') : '/',
+    )
   } catch (error) {
     errorMessage.value = error?.message || 'No pudimos iniciar sesion. Intenta de nuevo.'
   } finally {
@@ -190,6 +199,15 @@ async function submitLogin() {
 </script>
 
 <style scoped lang="scss">
+.login-checkout-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: #f7f7f9;
+  color: #736875;
+  font-size: 13px;
+  line-height: 1.5;
+}
 .login-page {
   display: flex;
   min-height: calc(100dvh - 120px);

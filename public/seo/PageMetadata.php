@@ -59,8 +59,8 @@ class SupernovaPageMetadata
     {
         $home = rtrim($home, '/') . '/';
         $titles = array('/ofertas' => 'Ofertas', '/mas-vendidos' => 'Más vendidos', '/nuevos' => 'Nuevos productos',
-            '/categorias' => 'Categorías', '/sucursales' => 'Sucursales', '/marcas' => 'Nuestras marcas',
-            '/buscar' => 'Buscar productos', '/carrito' => 'Mi carrito', '/checkout' => 'Checkout',
+            '/sucursales' => 'Sucursales', '/marcas' => 'Nuestras marcas',
+            '/buscar' => 'Buscar productos', '/carrito' => 'Mi carrito', '/checkout' => 'Checkout', '/pedido/completado' => 'Pedido completado',
             '/login' => 'Iniciar sesión', '/register' => 'Crear cuenta', '/panel' => 'Mi cuenta');
         $private = preg_match('~^/(carrito|checkout|login|register|panel|buscar|pedido)(/|$)~', $path);
         $meta = array('title' => $path === '/' ? self::NAME . ' - Tienda de Uñas, Pestañas, Geles y Más' : ($titles[$path] ?? 'Catálogo') . ' | ' . self::NAME,

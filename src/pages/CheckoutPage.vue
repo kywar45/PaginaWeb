@@ -13,8 +13,17 @@
     </div>
     <div v-else-if="!items.length" class="checkout-status">
       <q-icon name="shopping_bag" size="40px" color="primary" />
-      <p>Tu carrito está vacío.</p>
-      <q-btn unelevated no-caps color="primary" label="Explorar productos" to="/categorias" />
+      <p v-if="savedGuest">Pedido {{ savedGuest.orden }} registrado. Tu carrito está vacío.</p>
+      <p v-else>Tu carrito está vacío.</p>
+      <q-btn
+        v-if="savedGuest?.pdf_token"
+        flat
+        no-caps
+        color="primary"
+        label="Ver mi pedido"
+        @click="openReceipt"
+      />
+      <q-btn unelevated no-caps color="primary" label="Explorar productos" to="/" />
     </div>
     <div v-else class="checkout-layout" :class="{ 'checkout-layout--summary-only': currentUser }">
       <div v-if="!currentUser" class="checkout-content" :inert="savingGuest || undefined">
@@ -84,7 +93,7 @@
             label="Procesar pedido"
             icon-right="arrow_forward"
             :loading="validating"
-            :disable="cartBusy || readyToProcess || emailTesting"
+            :disable="cartBusy || readyToProcess"
             @click="processOrder"
           />
           <q-btn
@@ -96,12 +105,6 @@
             label="Ver mi pedido"
             class="checkout-process-button"
             @click="openReceipt"
-          />
-          <OrderMailTestPanel
-            class="checkout-mail-test"
-            :customer="guestDetails"
-            :disabled="savingGuest || validating || cartBusy"
-            @busy-change="emailTesting = $event"
           />
         </template>
       </aside>
@@ -121,18 +124,27 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import OrderMailTestPanel from 'src/components/OrderMailTestPanel.vue'
 import OrderProcessingDialog from 'src/components/OrderProcessingDialog.vue'
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import GuestCheckoutForm from 'src/components/GuestCheckoutForm.vue'
 import CheckoutDeliveryOptions from 'src/components/CheckoutDeliveryOptions.vue'
 import { emptyGuestDetails, normalizeGuestDetails } from 'src/utils/guestCheckout'
 import { createGuestFolio } from 'src/services/checkoutApi'
+import { rememberCompletedOrder } from 'src/services/checkoutCompletion'
 import { useCart } from 'src/services/cart'
 import { useAuthSession } from 'src/services/authSession'
 import { publicAsset } from 'src/utils/publicAsset'
 
-const { items, total, savings, regularTotal, cartCount, loadCart, busy: cartBusy } = useCart()
+const {
+  items,
+  total,
+  savings,
+  regularTotal,
+  cartCount,
+  loadCart,
+  resetCart,
+  busy: cartBusy,
+} = useCart()
 const { currentUser, loadCurrentUser } = useAuthSession()
 const guestDetails = ref(emptyGuestDetails())
 const deliverySelection = ref({ envio: null, shipping_carrier_id: null, sucursal_id: null })
@@ -146,7 +158,6 @@ const savedGuest = ref(null)
 const processingOpen = ref(false)
 const processingState = ref('processing')
 const router = useRouter()
-const emailTesting = ref(false)
 onBeforeRouteLeave(() => !savingGuest.value)
 let guestRequest
 let disposed = false
@@ -160,7 +171,7 @@ watch(
 )
 
 async function processOrder() {
-  if (validating.value || cartBusy.value || currentUser.value || emailTesting.value) return
+  if (validating.value || cartBusy.value || currentUser.value) return
   validating.value = true
   processError.value = ''
   readyToProcess.value = false
@@ -190,12 +201,6 @@ async function processOrder() {
     if (disposed || currentUser.value) return
     const customer = normalizeGuestDetails(guestDetails.value)
     const fingerprint = checkoutFingerprint(customer)
-    if (savedGuest.value?.fingerprint === fingerprint) {
-      readyToProcess.value = true
-      processingState.value = 'success'
-      processingOpen.value = true
-      return
-    }
     processingState.value = 'processing'
     processingOpen.value = true
     savingGuest.value = true
@@ -205,7 +210,7 @@ async function processOrder() {
       const result = await createGuestFolio(
         customer,
         { ...deliverySelection.value },
-        { signal: guestRequest.signal },
+        { signal: guestRequest.signal, cartFingerprint: fingerprint },
       )
       if (disposed) return
       if (
@@ -218,6 +223,20 @@ async function processOrder() {
         return
       }
       savedGuest.value = { ...result, fingerprint }
+      rememberCompletedOrder(result)
+      // Navigate while checkout still has its original height and the busy dialog is open.
+      savingGuest.value = false
+      await router.replace({ name: 'pedido-completado' })
+      processingOpen.value = false
+      resetCart()
+      guestDetails.value = emptyGuestDetails()
+      deliverySelection.value = { envio: null, shipping_carrier_id: null, sucursal_id: null }
+      // Reconcile header counters with the API, including additions from another tab.
+      try {
+        await loadCart()
+      } catch {
+        /* The confirmed purchase remains successful. */
+      }
       readyToProcess.value = true
       processingState.value = 'success'
     } finally {
@@ -337,9 +356,6 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 20px;
   min-width: 0;
-}
-.checkout-mail-test {
-  margin-top: 16px;
 }
 .checkout-summary {
   min-width: 0;

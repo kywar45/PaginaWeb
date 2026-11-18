@@ -24,7 +24,7 @@ class GuestCustomerService
         $this->auth = $auth;
     }
 
-    public function register(array $data)
+    public function register(array $data, $requestHash = null)
     {
         if ($this->auth->optionalUser() !== null) {
             throw new ApiException('GUEST_ONLY', 'Esta opción es para compras sin cuenta.', 409);
@@ -48,7 +48,7 @@ class GuestCustomerService
         if (!preg_match('/^\+?[0-9() .-]{7,20}$/D', $customer['telefono']) || strlen($digits) < 7 || strlen($digits) > 15) {
             $this->invalid('Ingresa un teléfono válido con lada.');
         }
-        return array('cliente_invitado_id' => $this->customers->register($customer));
+        return array('cliente_invitado_id' => $this->customers->register($customer, $requestHash));
     }
 
     private function invalid($message) { throw new ApiException('VALIDATION_ERROR', $message, 422); }

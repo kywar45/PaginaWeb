@@ -1,0 +1,1 @@
+function e(e){let t=`/ImportadoraSupernova/`;return`${t.endsWith(`/`)?t:`${t}/`}${String(e).replace(/^\/+/,``)}`}export{e as t};

@@ -26,7 +26,7 @@ class GuestOrderEmailService
         $row = $query->fetch(\PDO::FETCH_ASSOC);
         if (!$row || !filter_var($row['correo'], FILTER_VALIDATE_EMAIL)) throw new \RuntimeException('Invalid order email recipient');
         $token = bin2hex(random_bytes(32));
-        $url = 'https://www.importadorasupernova.com/StoreApi/v1/checkout/invitado/correo/pdf?token=' . $token;
+        $url = 'https://www.importadorasupernova.com/ImportadoraSupernova/pedido/correo/pdf?token=' . $token;
         $subject = 'Pedido registrado ' . $row['orden'] . ' | Importadora Supernova';
         $html = self::message($row['nombre'], $row['orden'], $url);
         $insert = $this->pdo->prepare('INSERT INTO web_order_emails

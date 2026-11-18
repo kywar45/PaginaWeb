@@ -724,7 +724,7 @@ function submitSearch(value) {
 }
 watch(() => route.fullPath, () => { focusedSearch.value = '' })
 watch(() => route.path, (path) => {
-  if (path === '/categorias' || path === '/subcategoria' || path.startsWith('/catalogo/')) mobileTab.value = 'search'
+  if (path === '/subcategoria' || path.startsWith('/catalogo/')) mobileTab.value = 'search'
   else if (path === '/') mobileTab.value = 'home'
   else if (path === '/carrito') mobileTab.value = 'cart'
   else if (['/login', '/register', '/panel'].includes(path)) mobileTab.value = 'user'
@@ -814,7 +814,7 @@ function selectCategory(slug) {
   activeCategory.value = slug
   activeSubcategory.value = ''
   leftDrawerOpen.value = false
-  if (slug === 'all') router.push('/categorias')
+  if (slug === 'all') router.push('/')
   else selectCategoryFromMenu(slug)
 }
 
@@ -823,7 +823,7 @@ function selectCategoryFromMenu(slug) {
   const id = category?.id_categoria ?? category?.id
   categoriesMenu.value = false
   if (id) router.push(catalogLocation(category, null, 1, categories.value))
-  else router.push('/categorias')
+  else router.push('/')
 }
 
 function selectSubcategory(categorySlug, subSlug) {

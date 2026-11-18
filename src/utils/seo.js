@@ -14,10 +14,10 @@ export const SOCIAL_LINKS = [
   'https://www.youtube.com/@lemussaoficial3601',
 ]
 const TITLES = {
+  '/pedido/completado': 'Pedido completado',
   '/ofertas': 'Ofertas',
   '/mas-vendidos': 'Más vendidos',
   '/nuevos': 'Nuevos productos',
-  '/categorias': 'Categorías',
   '/sucursales': 'Sucursales',
   '/marcas': 'Nuestras marcas',
   '/buscar': 'Buscar productos',

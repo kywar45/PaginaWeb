@@ -29,6 +29,20 @@ class CartService
         $this->guestOwner = $guestOwner;
     }
 
+    public function completeGuestCheckout(callable $saveOrder)
+    {
+        if ($this->owner['user_id'] > 0) throw new \LogicException('Guest checkout cannot empty an account cart');
+        return $this->execute('leer', null, null, function ($snapshot) use ($saveOrder) {
+            $order = $saveOrder($snapshot);
+            // Same owner lock and transaction as the folio, products and shipping snapshot.
+            $ids = array();
+            foreach ($this->carts->lines($this->owner) as $line) $ids[] = (int) $line['id'];
+            $this->carts->deactivate($this->owner, $ids);
+            $order['carrito_vaciado'] = true;
+            return $order;
+        });
+    }
+
     public function execute($action = 'leer', $id = null, $quantity = null, callable $onSnapshot = null)
     {
         if (!in_array($action, array('leer', 'agregar', 'cantidad', 'eliminar', 'fusionar'), true)) {

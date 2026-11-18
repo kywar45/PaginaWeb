@@ -7,7 +7,7 @@
       <h1>{{ notFound ? 'Producto no disponible' : 'No pudimos cargar el producto' }}</h1>
       <p>{{ errorMessage }}</p>
       <q-btn v-if="!notFound" no-caps color="primary" label="Reintentar" @click="loadProduct" />
-      <q-btn v-else flat no-caps color="primary" label="Explorar categorías" to="/categorias" />
+      <q-btn v-else flat no-caps color="primary" label="Explorar productos" to="/" />
     </div>
     <template v-else-if="product">
       <div class="product-layout">

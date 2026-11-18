@@ -32,6 +32,8 @@ check($sent[0] === $sent[1], 'Retry retains same private link and recipient');
 check($service->confirm($order) === 'sent' && count($sent) === 2, 'Saved confirmation is not sent twice');
 check($sent[0][0] === 'real@example.com' && strpos($sent[0][2], '<script>') === false, 'Stored recipient and escaped customer data');
 preg_match('/token=([a-f0-9]{64})/', $sent[0][2], $match);
+check(strpos($sent[0][2], '/ImportadoraSupernova/pedido/correo/pdf?token=') !== false, 'Email points to the website PDF viewer');
+check(strpos($sent[0][2], '/StoreApi/v1/checkout/') === false, 'Order links in email do not expose API URL');
 preg_match_all('/<a\b[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/s', $sent[0][2], $links, PREG_SET_ORDER);
 $receiptLinks = array_values(array_filter($links, function ($link) use ($match) { return strpos($link[1], 'token=' . $match[1]) !== false; }));
 check(count($receiptLinks) === 3, 'Order number, PDF button and fallback all use the same private receipt link');

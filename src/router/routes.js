@@ -1,3 +1,5 @@
+import { getCompletedOrder } from '../services/checkoutCompletion.js'
+
 const routes = [
   {
     path: '/',
@@ -9,8 +11,13 @@ const routes = [
       { path: 'buscar', component: () => import('pages/SearchPage.vue') },
       { path: 'carrito', component: () => import('pages/CartPage.vue') },
       { path: 'checkout', component: () => import('pages/CheckoutPage.vue') },
+      {
+        path: 'pedido/completado',
+        name: 'pedido-completado',
+        component: () => import('pages/OrderCompletePage.vue'),
+        beforeEnter: () => (getCompletedOrder() ? true : '/carrito'),
+      },
       { path: 'nuevos', component: () => import('pages/NewProductsPage.vue') },
-      { path: 'categorias', component: () => import('pages/CategoriesPage.vue') },
       { path: 'sucursales', component: () => import('pages/BranchesPage.vue') },
       { path: 'marcas/:id(\\d+)?', component: () => import('pages/BrandsPage.vue') },
       {
@@ -30,6 +37,11 @@ const routes = [
     ],
   },
 
+  {
+    path: '/pedido/correo/pdf',
+    name: 'pedido-correo-pdf',
+    component: () => import('pages/OrderPdfPage.vue'),
+  },
   {
     path: '/pedido/invitado/:cliente(\\d+)/:token(p1\\.[A-Za-z0-9_-]{54})/pdf',
     name: 'pedido-invitado-pdf',

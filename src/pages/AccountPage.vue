@@ -210,7 +210,7 @@
                 </div>
               </li>
             </ul>
-            <RouterLink to="/categorias" class="account-primary-link"
+            <RouterLink to="/" class="account-primary-link"
               >Explorar productos <q-icon name="arrow_forward" aria-hidden="true"
             /></RouterLink>
           </section>

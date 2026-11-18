@@ -1,0 +1,1 @@
+import{N as e,_ as t,h as n,t as r,v as i}from"./_plugin-vue_export-helper-RsY-DpDN.js";import{y as a}from"./QBtn-D23oLvsd.js";var o={},s={class:`new-badge`};function c(r,o){return e(),n(`span`,s,[i(a,{name:`auto_awesome`,"aria-hidden":`true`}),o[0]||=t(` ¡Nuevo!`,-1)])}var l=r(o,[[`render`,c],[`__scopeId`,`data-v-434434ab`]]);export{l as t};

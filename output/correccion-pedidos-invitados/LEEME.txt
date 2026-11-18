@@ -1,0 +1,5 @@
+1. Ejecutar EJECUTAR_EN_BASE_DE_DATOS.sql en phpMyAdmin, en la base de StoreApi. Se puede repetir si ya se aplico.
+2. Copiar los 4 archivos de StoreApi en sus mismas carpetas del servidor.
+3. Copiar el CONTENIDO de pagina donde se publica el frontend actual. No crear una nueva ruta /pagina. Incluir .htaccess.
+4. Recargar y probar una compra, y luego otra con los mismos datos. Cada compra nueva crea un invitado y la orden INV-ID.
+Este paquete no incluye cambios en api.php, correo, PDF ni diseno. No modifica pedidos anteriores.

@@ -9,10 +9,12 @@ class GuestCustomerRepository
     private $pdo;
     public function __construct(\PDO $pdo) { $this->pdo = $pdo; }
 
-    public function register(array $customer)
+    public function register(array $customer, $requestHash = null)
     {
-        // Exact retries reuse a record; a different address never overwrites past orders.
-        $lockName = 'snguest:' . substr(hash('sha256', json_encode($customer)), 0, 56);
+        if ($requestHash !== null) $requestHash = hash('sha256', $requestHash . json_encode($customer));
+        // Checkout reuses only the same purchase attempt, never another order's contact record.
+        // Standalone guest registration keeps its existing behavior.
+        $lockName = 'snguest:' . substr(hash('sha256', ($requestHash ?? '') . json_encode($customer)), 0, 56);
         $lock = $this->pdo->prepare('SELECT GET_LOCK(:guest_lock, 10)');
         $lock->execute(array(':guest_lock' => $lockName));
         if ((int) $lock->fetchColumn() !== 1) {
@@ -26,13 +28,14 @@ class GuestCustomerRepository
                 $params[':' . $field] = $value;
                 $conditions[] = $field . ' = :' . $field;
             }
-            $find = $this->pdo->prepare('SELECT id FROM web_clientes_invitados WHERE ' . implode(' AND ', $conditions) . ' ORDER BY id ASC LIMIT 1');
-            $find->execute($params);
+            $find = $this->pdo->prepare('SELECT id FROM web_clientes_invitados WHERE ' . ($requestHash === null ? implode(' AND ', $conditions) : 'checkout_request_hash = :request_hash') . ' ORDER BY id ASC LIMIT 1');
+            $find->execute($requestHash === null ? $params : array(':request_hash' => $requestHash));
             $id = $find->fetchColumn();
             if (!$id) {
                 $insert = $this->pdo->prepare('INSERT INTO web_clientes_invitados
-                    (nombre, apellido, correo, estado, ciudad, colonia, direccion, codigo_postal, telefono)
-                    VALUES (:nombre, :apellido, :correo, :estado, :ciudad, :colonia, :direccion, :codigo_postal, :telefono)');
+                    (nombre, apellido, correo, estado, ciudad, colonia, direccion, codigo_postal, telefono' . ($requestHash === null ? '' : ', checkout_request_hash') . ')
+                    VALUES (:nombre, :apellido, :correo, :estado, :ciudad, :colonia, :direccion, :codigo_postal, :telefono' . ($requestHash === null ? '' : ', :request_hash') . ')');
+                if ($requestHash !== null) $params[':request_hash'] = $requestHash;
                 $insert->execute($params);
                 $id = $this->pdo->lastInsertId();
             }
