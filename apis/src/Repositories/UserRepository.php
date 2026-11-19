@@ -14,7 +14,7 @@ class UserRepository
     public function findByCorreo($correo)
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, nombre, apellido, correo, pass, tipo, nivel, user_vip
+            'SELECT id, nombre, apellido, correo, pass, token_registro, user_vip
              FROM usuario
              WHERE correo = ?
              LIMIT 1'
@@ -29,7 +29,7 @@ class UserRepository
     public function findBySessionHash($sessionHash)
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, nombre, apellido, correo, tipo, nivel, user_vip
+            'SELECT id, nombre, apellido, correo, token_registro, user_vip
              FROM usuario
              WHERE token_sesion = ?
              LIMIT 1'
@@ -70,6 +70,15 @@ class UserRepository
         $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
+    }
+
+    public function startVerifiedSession($id, $sessionHash, $passwordHash)
+    {
+        // Refuse a login validated against a password that a concurrent reset replaced.
+        $stmt = $this->pdo->prepare("UPDATE usuario SET token_sesion = ?
+            WHERE id = ? AND BINARY pass = ? AND token_registro IS NOT NULL AND TRIM(token_registro) <> ''");
+        $stmt->execute(array($sessionHash, $id, $passwordHash));
+        return $stmt->rowCount() === 1;
     }
 
     public function updateSessionHash($id, $sessionHash)

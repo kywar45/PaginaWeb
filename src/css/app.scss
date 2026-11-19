@@ -2424,6 +2424,52 @@ body,
   color: #fff !important;
 }
 
+// Current store section: shared indicator for desktop and the mobile strip.
+.sn-desktop-nav__link,
+.sn-mobile-shortcuts > a,
+.sn-all-category-trigger {
+  position: relative;
+}
+
+.sn-desktop-nav__link::after,
+.sn-mobile-shortcuts > a::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  bottom: 4px;
+  left: 12px;
+  height: 3px;
+  border-radius: 3px;
+  background: #fff;
+  opacity: 0;
+  transform: scaleX(0.5);
+  transition: opacity 150ms ease, transform 150ms ease;
+  pointer-events: none;
+}
+
+.sn-desktop-nav__link.sn-section-active {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.sn-desktop-nav__link.sn-section-active::after,
+.sn-mobile-shortcuts > a.sn-section-active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.sn-mobile-shortcuts > a::after {
+  right: 0;
+  bottom: -7px;
+  left: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sn-desktop-nav__link::after,
+  .sn-mobile-shortcuts > a::after {
+    transition: none;
+  }
+}
+
 .sn-all-category-trigger .q-icon {
   color: #c91e54 !important;
 }
@@ -2624,6 +2670,89 @@ body,
   font-size: 11px !important;
 }
 
+// Compact footer: contact information above, stores across the full width.
+.sn-footer-desktop.sn-footer-organized {
+  padding: 32px 48px 0 !important;
+}
+
+.sn-footer-organized .sn-footer-grid {
+  grid-template-columns: minmax(190px, 1fr) minmax(380px, 1.8fr) minmax(190px, 1fr) !important;
+  align-items: start;
+  gap: 36px !important;
+}
+
+.sn-footer-organized .sn-footer-logo {
+  width: 205px !important;
+  max-width: 100% !important;
+}
+
+.sn-footer-organized .sn-footer-motto {
+  margin: 12px 0 16px !important;
+  font-size: 22px !important;
+}
+
+.sn-footer-organized .sn-footer-socials { gap: 9px; }
+.sn-footer-organized .sn-footer-social {
+  display: grid;
+  place-items: center;
+  width: 30px !important;
+  height: 30px !important;
+  padding: 4px;
+  border-radius: 50%;
+}
+.sn-footer-organized .sn-footer-social img { width: 22px; height: 22px; object-fit: contain; }
+
+.sn-footer-organized .sn-footer-title {
+  margin: 0 0 14px !important;
+  font-size: 14px !important;
+  line-height: 1.4;
+}
+.sn-footer-organized .sn-footer-title::after { display: none; }
+.sn-footer-contact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.sn-footer-organized .sn-footer-block { padding: 0 !important; min-width: 0; }
+.sn-footer-contact-label { display: flex; align-items: center; gap: 6px; font-size: 12px; line-height: 1.5; margin-bottom: 8px; }
+.sn-footer-organized .sn-footer-phone { display: inline-block; font-size: 15px !important; font-weight: 700; line-height: 1.5; text-decoration: none; }
+.sn-footer-contact-hours { display: flex; align-items: flex-start; gap: 5px; font-size: 10px; line-height: 1.6; margin: 7px 0 0; color: rgba(255,255,255,.86); }
+.sn-footer-contact-hours .q-icon { margin-top: 3px; }
+.sn-footer-account-column > p { color: rgba(255,255,255,.88); font-size: 12px; line-height: 1.6; margin: 0 0 12px; }
+.sn-footer-organized .sn-footer-account { display: inline-flex; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid rgba(255,255,255,.4); border-radius: 8px; margin: 0; font-size: 12px; text-decoration: none; }
+.sn-footer-organized .sn-footer-account:hover { background: rgba(255,255,255,.12); text-decoration: none; }
+
+.sn-footer-organized .sn-footer-stores-column {
+  position: relative;
+  z-index: 1;
+  max-width: 1184px;
+  margin: 26px auto 0;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255,255,255,.24);
+}
+.sn-footer-stores-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 16px; }
+.sn-footer-stores-heading .sn-footer-title { margin-bottom: 3px !important; }
+.sn-footer-stores-heading p { margin: 0; font-size: 11px; color: rgba(255,255,255,.82); }
+.sn-footer-stores-heading > a { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; font-size: 12px; font-weight: 650; color: #fff; text-decoration: none; }
+.sn-footer-stores-heading > a:hover { text-decoration: underline; }
+.sn-footer-organized .sn-footer-stores-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.sn-footer-organized .sn-store-card { flex-direction: column; align-items: stretch; gap: 9px; padding: 13px 12px; border-radius: 10px; }
+.sn-store-card__heading { display: grid; grid-template-columns: 14px minmax(0, 1fr) 20px; align-items: start; gap: 5px; }
+.sn-store-card__heading > .q-icon { font-size: 16px; margin-top: 1px; }
+.sn-store-card__heading h3 { margin: 0; font-size: 12px; line-height: 1.5; font-weight: 700; overflow-wrap: anywhere; }
+.sn-store-card__map { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 5px; color: #fff; text-decoration: none; }
+.sn-store-card__map:hover { background: rgba(255,255,255,.17); }
+.sn-footer-organized .sn-store-card__body { flex: 1; }
+.sn-footer-organized .sn-store-card__body p { font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; color: rgba(255,255,255,.9) !important; }
+.sn-store-card__contact { display: grid; gap: 4px; }
+.sn-store-card__contact > a, .sn-store-card__contact > span { display: flex; align-items: baseline; gap: 5px; font-size: 10px; line-height: 1.5; color: #fff; text-decoration: none; overflow-wrap: anywhere; }
+.sn-store-card__contact > a { font-weight: 650; }
+.sn-store-card__contact > a:hover { text-decoration: underline; }
+.sn-footer-store-state { display: flex; align-items: center; gap: 14px; padding: 12px 0; margin: 0; font-size: 12px; }
+.sn-footer-organized .sn-footer-bottom { width: 100% !important; max-width: 1184px !important; margin-top: 20px !important; padding: 16px 0 !important; font-size: 10px !important; }
+
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .sn-footer-desktop.sn-footer-organized { padding-inline: 32px !important; }
+  .sn-footer-organized .sn-footer-grid { grid-template-columns: minmax(170px, .9fr) minmax(340px, 1.8fr) minmax(165px, .9fr) !important; gap: 22px !important; }
+  .sn-footer-organized .sn-footer-phone { font-size: 13px !important; }
+}
+
 /* ---------- MÓVIL: misma identidad ---------- */
 @media (max-width: 1023px) {
   .sn-mobile-nav {
@@ -2719,7 +2848,7 @@ body,
     align-items: center;
     gap: 24px;
     overflow-x: auto;
-    padding: 16px 2px 4px;
+    padding: 16px 2px 11px;
     scrollbar-width: none;
   }
 

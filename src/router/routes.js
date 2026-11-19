@@ -34,6 +34,9 @@ const routes = [
       { path: 'login', component: () => import('pages/LoginPage.vue') },
       { path: 'panel', component: () => import('pages/AccountPage.vue') },
       { path: 'register', component: () => import('pages/RegisterPage.vue') },
+      { path: 'confirmar-correo', component: () => import('pages/ConfirmEmailPage.vue') },
+      { path: 'olvide-contrasena', component: () => import('pages/PasswordRecoveryPage.vue') },
+      { path: 'restablecer-contrasena', component: () => import('pages/PasswordRecoveryPage.vue') },
     ],
   },
 

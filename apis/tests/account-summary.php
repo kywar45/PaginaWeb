@@ -18,7 +18,7 @@ namespace {
         public $count = 3;
         public function __construct() {}
         public function findBySessionHash($hash) {
-            return $this->valid && $hash === hash('sha256', 'test-session') ? array('id' => 23) : null;
+            return $this->valid && $hash === hash('sha256', 'test-session') ? array('id' => 23, 'token_registro' => 'confirmed') : null;
         }
         public function countPaidOrders($userId) { $this->calls[] = $userId; return $this->count; }
     }

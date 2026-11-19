@@ -40,13 +40,19 @@ class AuthService
             throw new ApiException('INVALID_CREDENTIALS', 'Credenciales invalidas.', 401);
         }
 
+        if (trim((string) ($usuario['token_registro'] ?? '')) === '') {
+            throw new ApiException('EMAIL_UNVERIFIED', 'Confirma tu correo antes de iniciar sesión. Revisa tu bandeja de entrada o solicita otro enlace.', 403);
+        }
+
         $token = bin2hex(random_bytes(32));
         $sessionHash = hash('sha256', $token);
 
         $this->pdo->beginTransaction();
 
         try {
-            $this->users->updateSessionHash((int) $usuario['id'], $sessionHash);
+            if (!$this->users->startVerifiedSession((int) $usuario['id'], $sessionHash, (string) $usuario['pass'])) {
+                throw new ApiException('INVALID_CREDENTIALS', 'Tu cuenta cambió durante el acceso. Inicia sesión de nuevo con tu contraseña actual.', 401);
+            }
 
             if ($legacyPassword && $this->envBool('AUTH_REHASH_LEGACY_PASSWORDS', false)) {
                 $this->users->updatePasswordHash((int) $usuario['id'], password_hash($password, PASSWORD_DEFAULT));
@@ -181,7 +187,7 @@ class AuthService
 
         $usuario = $this->users->findBySessionHash(hash('sha256', $token));
 
-        if (!$usuario) {
+        if (!$usuario || trim((string) ($usuario['token_registro'] ?? '')) === '') {
             $this->clearSessionCookie();
             throw new ApiException('UNAUTHENTICATED', 'Sesion no valida.', 401);
         }
@@ -207,13 +213,18 @@ class AuthService
             'nombre' => (string) $usuario['nombre'],
             'apellido' => (string) $usuario['apellido'],
             'correo' => (string) $usuario['correo'],
-            'tipo' => (string) $usuario['tipo'],
-            'nivel' => (string) $usuario['nivel'],
+            'tipo' => !empty($usuario['user_vip']) ? 'VIP' : 'Cliente',
+            'nivel' => '',
             'user_vip' => (int) $usuario['user_vip'],
         );
     }
 
     private function passwordMatches($password, $storedPassword, &$legacyPassword)
+    {
+        return self::checkPassword($password, $storedPassword, $legacyPassword, $this->envBool('AUTH_ALLOW_LEGACY_PASSWORDS', true));
+    }
+
+    public static function checkPassword($password, $storedPassword, &$legacyPassword, $allowLegacy = true)
     {
         $legacyPassword = false;
 
@@ -227,7 +238,7 @@ class AuthService
             return password_verify($password, $storedPassword);
         }
 
-        if ($this->envBool('AUTH_ALLOW_LEGACY_PASSWORDS', true) && hash_equals($storedPassword, $password)) {
+        if ($allowLegacy && hash_equals($storedPassword, $password)) {
             $legacyPassword = true;
             return true;
         }

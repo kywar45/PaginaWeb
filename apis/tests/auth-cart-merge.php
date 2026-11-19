@@ -35,12 +35,13 @@ namespace {
         public function __construct() {}
         public function findByCorreo($correo) { return $this->user; }
         public function updateSessionHash($id, $hash) {}
+        public function startVerifiedSession($id, $hash, $passwordHash) { return true; }
     }
     function check($value, $message) { if (!$value) throw new \RuntimeException($message); }
     $users = new LoginUsers();
     $users->user = array('id' => 23, 'nombre' => 'Cliente', 'apellido' => 'Prueba',
         'correo' => 'test@example.com', 'tipo' => 'Cliente', 'nivel' => 1, 'user_vip' => 1,
-        'pass' => password_hash('correct-password', PASSWORD_DEFAULT));
+        'pass' => password_hash('correct-password', PASSWORD_DEFAULT), 'token_registro' => 'confirmed');
     $auth = new \App\Services\AuthService(new LoginPdo(), $users);
     $_COOKIE = array('sn_guest_cart' => str_repeat('a', 64));
     $result = $auth->login('test@example.com', 'correct-password', false);

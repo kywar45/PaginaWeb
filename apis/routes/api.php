@@ -186,6 +186,42 @@ return function (Router $router): void {
     });
 
 
+    $registrationController = function () {
+        $pdo = Connection::get();
+        return new \App\Controllers\RegistrationController(new \App\Services\RegistrationService(
+            new \App\Repositories\RegistrationRepository($pdo),
+            new \App\Services\RegistrationEmailService(new \App\Services\GuestOrderEmailService($pdo))
+        ));
+    };
+    $passwordResetController = function () {
+        $pdo = Connection::get();
+        return new \App\Controllers\PasswordResetController(new \App\Services\PasswordResetService(
+            new \App\Repositories\PasswordResetRepository($pdo),
+            new \App\Services\PasswordResetEmailService(new \App\Services\GuestOrderEmailService($pdo))
+        ));
+    };
+    $router->post('/v1/auth/olvide-contrasena', function () use ($passwordResetController): void {
+        $passwordResetController()->request();
+    });
+    $router->post('/v1/auth/validar-restablecimiento', function () use ($passwordResetController): void {
+        $passwordResetController()->validate();
+    });
+    $router->post('/v1/auth/validar-confirmacion', function () use ($registrationController): void {
+        $registrationController()->validate();
+    });
+    $router->post('/v1/auth/restablecer-contrasena', function () use ($passwordResetController): void {
+        $passwordResetController()->reset();
+    });
+    $router->post('/v1/auth/register', function () use ($registrationController): void {
+        $registrationController()->register();
+    });
+    $router->post('/v1/auth/confirmar-correo', function () use ($registrationController): void {
+        $registrationController()->confirm();
+    });
+    $router->post('/v1/auth/reenviar-confirmacion', function () use ($registrationController): void {
+        $registrationController()->resend();
+    });
+
     $router->post('/v1/auth/login', function (): void {
         $pdo = Connection::get();
         $repository = new UserRepository($pdo);

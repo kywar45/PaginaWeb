@@ -56,14 +56,16 @@
           </q-input>
 
         </div>
-        <nav class="sn-mobile-shortcuts" aria-label="Secciones de la tienda">
-          <RouterLink to="/ofertas" class="sn-mobile-shortcuts__offers">
-            <q-icon name="local_offer" /> Ofertas
+        <nav ref="mobileShortcuts" class="sn-mobile-shortcuts" aria-label="Secciones de la tienda">
+          <RouterLink
+            v-for="section in storeSections"
+            :key="section.to"
+            :to="section.to"
+            :class="{ 'sn-mobile-shortcuts__offers': section.to === '/ofertas', 'sn-section-active': isStoreSection(section.to) }"
+            :aria-current="isStoreSection(section.to) ? 'page' : undefined"
+          >
+            <q-icon :name="section.icon" /> {{ section.label }}
           </RouterLink>
-          <RouterLink to="/nuevos"><q-icon name="shield" /> Nuevos</RouterLink>
-          <RouterLink to="/mas-vendidos"><q-icon name="trending_up" /> Más vendidos</RouterLink>
-          <RouterLink to="/marcas"><q-icon name="workspace_premium" /> Nuestras marcas</RouterLink>
-          <RouterLink to="/sucursales"><q-icon name="storefront" /> Sucursales</RouterLink>
         </nav>
       </div>
 
@@ -290,32 +292,18 @@
           </q-btn>
 
           <q-btn
+            v-for="section in storeSections"
+            :key="section.to"
             flat
             no-caps
-            icon="local_offer"
-            label="Ofertas"
+            :icon="section.icon"
+            :label="section.label"
+            :to="section.to"
             class="sn-desktop-nav__link"
-            @click="showOffers"
-          >
-          </q-btn>
-          <q-btn flat no-caps icon="shield" label="Nuevos" to="/nuevos" class="sn-desktop-nav__link" />
-          <q-btn
-            flat
-            no-caps
-            icon="trending_up"
-            label="Más vendidos"
-            to="/mas-vendidos"
-            class="sn-desktop-nav__link"
+            :class="{ 'sn-section-active': isStoreSection(section.to) }"
+            :aria-current="isStoreSection(section.to) ? 'page' : undefined"
+            @click="categoriesMenu = false"
           />
-          <q-btn
-            flat
-            no-caps
-            icon="workspace_premium"
-            label="Nuestras marcas"
-            to="/marcas"
-            class="sn-desktop-nav__link"
-          />
-          <q-btn flat no-caps icon="storefront" label="Sucursales" to="/sucursales" class="sn-desktop-nav__link" />
         </div>
       </div>
     </q-header>
@@ -488,91 +476,66 @@
     <!-- ══════════════════════════════════ FOOTER ════════════════════════════════════ -->
     <q-footer bordered :elevated="false" class="sn-footer sn-footer--premium" :class="{ 'sn-footer--keyboard': keyboardVisible }">
       <!-- DESKTOP FOOTER -->
-      <div class="sn-footer-desktop gt-sm">
+      <div class="sn-footer-desktop sn-footer-organized gt-sm">
         <div class="sn-footer-grid">
           <div class="sn-footer-identity">
             <img v-image-skeleton :src="publicAsset('img/logob.png')" alt="Importadora Supernova" class="sn-footer-logo" />
-            <p class="sn-footer-motto">Estamos,<br />aquí para tí ♡</p>
-          </div>
-          <div>
-            <div class="sn-footer-title">Contacto</div>
-            <div v-for="contact in footerContacts" :key="contact.title" class="sn-footer-block">
-              <div class="sn-footer-line">
-                <q-icon :name="contact.icon" /><span>{{ contact.title }}</span>
-              </div>
-              <a :href="contact.href" class="sn-footer-line sn-footer-phone"
-                ><q-icon name="call" /><span>{{ contact.phone }}</span></a
-              >
-              <div class="sn-footer-line">
-                <q-icon name="schedule" /><span>{{ contact.hours }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="sn-footer-stores-column">
-            <div class="sn-footer-title">Tiendas oficiales</div>
-            <LoadingSkeleton v-if="footerStoresLoading" variant="list" :count="2" label="Cargando tiendas..." />
-            <div v-else-if="footerStoresError" role="alert">
-              <p>No pudimos cargar las tiendas.</p>
-              <q-btn flat dense no-caps color="white" label="Reintentar" @click="loadFooterStores" />
-            </div>
-            <p v-else-if="!footerStores.length">No hay tiendas disponibles por el momento.</p>
-            <div v-else class="sn-footer-stores-grid">
-              <article v-for="store in footerStores" :key="store.id" class="sn-store-card">
-                <q-icon name="location_on" />
-                <div class="sn-store-card__body">
-                  <strong>{{ store.name }}</strong>
-                  <p>{{ store.address }}</p>
-                  <a v-if="store.phone && store.href" :href="store.href">{{ store.phone }}</a>
-                  <span v-if="store.hours">{{ store.hours }}</span>
-                </div>
-                <q-btn
-                  flat
-                  dense
-                  round
-                  icon="map"
-                  :href="store.mapsHref"
-                  target="_blank"
-                  rel="noopener"
-                  aria-label="Abrir ubicacion en Maps"
-                />
-              </article>
-            </div>
-          </div>
-          <div>
-            <div class="sn-footer-title">Mi cuenta</div>
-            <button type="button" class="sn-footer-account" @click="goToAccount">
-              {{ currentUser ? 'Mi panel' : 'Iniciar sesión' }}
-            </button>
-            <p class="sn-footer-line">Consulta tus pedidos y los datos de tu cuenta.</p>
-          </div>
-          <div>
-            <div class="sn-footer-title">Síguenos</div>
-            <div class="sn-footer-socials">
-              <a
-                v-for="social in footerSocialLinks"
-                :key="social.name"
-                :href="social.href"
-                target="_blank"
-                rel="noopener"
-                class="sn-footer-social"
-                :aria-label="social.name"
-              >
-                <img v-image-skeleton :src="social.image" :alt="social.name" /><q-tooltip>{{
-                  social.name
-                }}</q-tooltip>
+            <p class="sn-footer-motto">Estamos aquí para ti ♡</p>
+            <div class="sn-footer-socials" aria-label="Redes sociales de Supernova">
+              <a v-for="social in footerSocialLinks" :key="social.name" :href="social.href" target="_blank" rel="noopener noreferrer" class="sn-footer-social" :aria-label="social.name">
+                <img v-image-skeleton :src="social.image" alt="" width="22" height="22" />
+                <q-tooltip>{{ social.name }}</q-tooltip>
               </a>
             </div>
-            <!--<p class="sn-footer-motto sn-footer-motto--small">
-              Más que belleza,<br />es tu estilo ♡
-            </p>-->
           </div>
+          <section class="sn-footer-contact" aria-labelledby="footer-contact-title">
+            <h2 id="footer-contact-title" class="sn-footer-title">Hablemos de tu compra</h2>
+            <div class="sn-footer-contact-grid">
+              <div v-for="contact in footerContacts" :key="contact.title" class="sn-footer-block">
+                <div class="sn-footer-contact-label"><q-icon :name="contact.icon" aria-hidden="true" /><span>{{ contact.title }}</span></div>
+                <a :href="contact.href" class="sn-footer-phone">{{ contact.phone }}</a>
+                <p class="sn-footer-contact-hours"><q-icon name="schedule" aria-hidden="true" />{{ contact.hours }}</p>
+              </div>
+            </div>
+          </section>
+          <section class="sn-footer-account-column" aria-labelledby="footer-account-title">
+            <h2 id="footer-account-title" class="sn-footer-title">Tu espacio Supernova</h2>
+            <p>Consulta tus pedidos y administra tu cuenta.</p>
+            <button type="button" class="sn-footer-account" @click="goToAccount">
+              <q-icon name="person_outline" aria-hidden="true" />{{ currentUser ? 'Ir a mi panel' : 'Entrar a mi cuenta' }}<q-icon name="arrow_forward" aria-hidden="true" />
+            </button>
+          </section>
         </div>
+        <section class="sn-footer-stores-column" aria-labelledby="footer-stores-title">
+          <div class="sn-footer-stores-heading">
+            <div><h2 id="footer-stores-title" class="sn-footer-title">Visítanos en nuestras tiendas</h2><p>Tu Supernova más cerca de ti.</p></div>
+            <RouterLink to="/sucursales">Ver sucursales <q-icon name="arrow_forward" aria-hidden="true" /></RouterLink>
+          </div>
+          <LoadingSkeleton v-if="footerStoresLoading" variant="list" :count="2" label="Cargando tiendas..." />
+          <div v-else-if="footerStoresError" class="sn-footer-store-state" role="alert">
+            <span>No pudimos cargar las tiendas.</span><q-btn flat dense no-caps color="white" label="Reintentar" @click="loadFooterStores" />
+          </div>
+          <p v-else-if="!footerStores.length" class="sn-footer-store-state">No hay tiendas disponibles por el momento.</p>
+          <div v-else class="sn-footer-stores-grid">
+            <article v-for="store in footerStores" :key="store.id" class="sn-store-card">
+              <div class="sn-store-card__heading">
+                <q-icon name="location_on" aria-hidden="true" /><h3>{{ store.name }}</h3>
+                <a v-if="store.mapsHref" :href="store.mapsHref" target="_blank" rel="noopener noreferrer" :aria-label="`Ver ${store.name} en Maps`" class="sn-store-card__map"><q-icon name="north_east" aria-hidden="true" /><q-tooltip>Cómo llegar</q-tooltip></a>
+              </div>
+              <div class="sn-store-card__body"><p>{{ store.address }}</p></div>
+              <div class="sn-store-card__contact">
+                <a v-if="store.phone && store.href" :href="store.href"><q-icon name="call" aria-hidden="true" />{{ store.phone }}</a>
+                <span v-if="store.hours"><q-icon name="schedule" aria-hidden="true" />{{ store.hours }}</span>
+              </div>
+            </article>
+          </div>
+        </section>
         <div class="sn-footer-bottom">
           <span
             >© {{ new Date().getFullYear() }} Importadora Supernova. Todos los derechos
             reservados.</span
           >
-          <span>Belleza · Calidad · Confianza · Siempre contigo</span>
+          <span>De todo para ti, a precios para ti.</span>
         </div>
       </div>
 
@@ -604,7 +567,7 @@ import { publicAsset } from 'src/utils/publicAsset'
 import { useProductNavigation } from 'src/services/productNavigation'
 import { useCart } from 'src/services/cart'
 const openProduct = useProductNavigation()
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getBranches } from 'src/services/branchApi'
 import { useRoute, useRouter } from 'vue-router'
 import { catalogLocation } from 'src/utils/catalogRoutes'
@@ -698,6 +661,26 @@ onBeforeUnmount(() => {
 })
 
 const route = useRoute()
+const storeSections = [
+  { to: '/ofertas', label: 'Ofertas', icon: 'local_offer' },
+  { to: '/nuevos', label: 'Nuevos', icon: 'shield' },
+  { to: '/mas-vendidos', label: 'Más vendidos', icon: 'trending_up' },
+  { to: '/marcas', label: 'Nuestras marcas', icon: 'workspace_premium' },
+  { to: '/sucursales', label: 'Sucursales', icon: 'storefront' },
+]
+const mobileShortcuts = ref(null)
+function isStoreSection(path) {
+  return route.path === path || route.path.startsWith(path + '/')
+}
+watch(() => route.path, async () => {
+  await nextTick()
+  const nav = mobileShortcuts.value
+  const active = nav?.querySelector('.sn-section-active')
+  if (!active || !nav.clientWidth) return
+  const left = nav.scrollLeft + active.getBoundingClientRect().left - nav.getBoundingClientRect().left
+  // Move only the horizontal strip, keeping the page's scroll position intact.
+  nav.scrollTo({ left: left - (nav.clientWidth - active.offsetWidth) / 2, behavior: 'auto' })
+}, { immediate: true, flush: 'post' })
 watch(() => route.query.q, (value) => {
   if (route.path === '/buscar') searchQuery.value = typeof value === 'string' ? value : ''
 }, { immediate: true })
@@ -742,7 +725,7 @@ function goToHome() {
 
 const footerContacts = [
   {
-    title: 'Envios a Nivel nacional',
+    title: 'Envíos nacionales',
     icon: 'local_shipping',
     phone: '+52 55 4556-4443',
     href: 'tel:+525545564443',

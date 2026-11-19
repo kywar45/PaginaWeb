@@ -65,6 +65,45 @@ export async function me() {
   return request('/auth/me', { method: 'GET' }, 'Sesion no valida.')
 }
 
+function registrationRequest(path, body, signal) {
+  return request(
+    path,
+    {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal,
+    },
+    'No pudimos completar la solicitud. Intenta de nuevo.',
+  )
+}
+export function registerAccount(data) {
+  return registrationRequest('/auth/register', data)
+}
+export function confirmAccount(token) {
+  return registrationRequest('/auth/confirmar-correo', { token })
+}
+export function resendAccountConfirmation(correo, password) {
+  return registrationRequest('/auth/reenviar-confirmacion', { correo, password })
+}
+export function requestPasswordReset(correo) {
+  return registrationRequest('/auth/olvide-contrasena', { correo })
+}
+export function resetPassword(token, password, password_confirmation) {
+  return registrationRequest('/auth/restablecer-contrasena', {
+    token,
+    password,
+    password_confirmation,
+  })
+}
+export function validateResetLink(token, { signal } = {}) {
+  return registrationRequest('/auth/validar-restablecimiento', { token }, signal)
+}
+export function validateConfirmationLink(token, { signal } = {}) {
+  return registrationRequest('/auth/validar-confirmacion', { token }, signal)
+}
+
 export async function accountSummary({ signal } = {}) {
   const data = await request(
     '/auth/resumen',

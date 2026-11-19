@@ -57,7 +57,7 @@
             @click="selectTile(tile)"
           >
             <span class="catalog-menu__tile-title"
-              >{{ tile.label }}<q-icon name="chevron_right"
+              >{{ tile.label }}<q-icon name="arrow_forward" aria-hidden="true"
             /></span>
           </button>
         </div>
@@ -1000,91 +1000,53 @@ function selectTile(tile) {
 .catalog-menu__campaign-brand > .catalog-menu__slogan { letter-spacing: 1.3px; }
 .catalog-menu__tiles {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 10px 12px;
   align-content: start;
 }
 .catalog-menu__tile {
   position: relative;
-  isolation: isolate;
   overflow: hidden;
-  min-height: 68px;
-  padding: 13px 12px 13px 15px;
-  border: 1px solid #f0dce3;
-  border-radius: 10px;
+  min-height: 60px;
+  padding: 12px 14px;
+  border: 1px solid #e9e5e8;
+  border-radius: 8px;
   background: #fff;
-  box-shadow: 0 4px 12px rgba(97, 45, 62, 0.05);
+  box-shadow: none;
   color: #292331;
   cursor: pointer;
   transition:
     color 0.18s ease,
-    background 0.18s ease,
     border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease;
-}
-.catalog-menu__tile::before {
-  position: absolute;
-  z-index: 0;
-  inset: 0 0 0 auto;
-  width: 52px;
-  background:
-    linear-gradient(
-      158deg,
-      transparent 0 17%,
-      rgba(255, 255, 255, 0.06) 17.4% 20.4%,
-      transparent 20.8% 34%,
-      rgba(255, 255, 255, 0.05) 34.4% 37%,
-      transparent 37.4%
-    ),
-    linear-gradient(
-      20deg,
-      transparent 0 70%,
-      rgba(255, 255, 255, 0.05) 70.4% 73.5%,
-      transparent 74%
-    ),
-    radial-gradient(
-      110% 72% at -2% 10%,
-      transparent 63%,
-      rgba(255, 255, 255, 0.12) 64%,
-      rgba(255, 255, 255, 0.035) 66%,
-      transparent 68%
-    ),
-    linear-gradient(112deg, #ff4f79, #f43f6f 48%, #df2f61);
-  pointer-events: none;
-  content: '';
+    box-shadow 0.18s ease;
 }
 .catalog-menu__tile-title {
   position: relative;
   z-index: 1;
   align-items: center;
-  gap: 18px;
+  gap: 10px;
   color: #292331;
   font-size: 13px;
-  font-weight: 700;
-  line-height: 1.35;
+  font-weight: 600;
+  line-height: 1.45;
 }
 .catalog-menu__tile-title .q-icon {
   display: grid;
-  width: 27px;
-  height: 27px;
+  width: 20px;
+  height: 24px;
   place-items: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff;
-  font-size: 18px;
-  transition:
-    transform 0.18s ease,
-    background 0.18s ease;
+  background: transparent;
+  color: #df3266;
+  font-size: 17px;
+  transition: transform 0.18s ease;
 }
 .catalog-menu__tile:hover {
-  transform: translateY(-2px);
-  border-color: #d9cbd0;
+  border-color: #e26488;
   background: #fff;
   color: #292331;
-  box-shadow: 0 7px 17px rgba(58, 39, 46, 0.1);
+  box-shadow: 0 2px 8px rgba(58, 39, 46, 0.06);
 }
 .catalog-menu__tile:hover .q-icon {
-  transform: translateX(3px);
+  transform: translateX(2px);
 }
 .catalog-menu__tile:focus-visible {
   outline: 2px solid #de7c97;

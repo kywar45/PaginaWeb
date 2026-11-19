@@ -63,6 +63,11 @@ class GuestOrderEmailService
         }
     }
 
+    public function sendTransactional($recipient, $subject, $html)
+    {
+        return $this->send($recipient, $subject, $html);
+    }
+
     private function send($recipient, $subject, $html)
     {
         $from = self::setting('ORDER_MAIL_FROM', 'no-reply@importadorasupernova.com');

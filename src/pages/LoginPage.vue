@@ -89,7 +89,11 @@
 
           <div class="login-form__options">
             <q-checkbox v-model="remember" label="Recordarme" dense color="primary" />
-            <button type="button" class="login-form__forgot">Olvidé mi contraseña</button>
+            <RouterLink
+              :to="{ path: '/olvide-contrasena', query: email ? { correo: email } : {} }"
+              class="login-form__forgot"
+              >Olvidé mi contraseña</RouterLink
+            >
           </div>
 
           <q-banner v-if="errorMessage" rounded class="login-form__message">
@@ -126,6 +130,7 @@
             <span>¿Necesitas ayuda? <a href="tel:+525524954670">55 2495 4670</a></span>
           </div>
         </q-form>
+        <ResendConfirmation v-if="awaitingConfirmation" :email="email" />
       </div>
     </section>
   </q-page>
@@ -134,7 +139,8 @@
 <script setup>
 import { publicAsset } from 'src/utils/publicAsset'
 import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import ResendConfirmation from 'src/components/ResendConfirmation.vue'
 import { useRoute, useRouter } from 'vue-router'
 import authApi from 'src/services/authApi'
 import { useAuthSession } from 'src/services/authSession'
@@ -147,12 +153,16 @@ const checkoutReturn = computed(() => route.query.next === '/checkout')
 const { loadCurrentUser, setCurrentUser } = useAuthSession()
 const { setMergeNotice } = useCart()
 
-const email = ref('')
+const email = ref(typeof route.query.correo === 'string' ? route.query.correo.slice(0, 250) : '')
 const password = ref('')
 const remember = ref(false)
 const showPassword = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
+const awaitingConfirmation = ref(false)
+watch([email, password], () => {
+  awaitingConfirmation.value = false
+})
 
 onMounted(async () => {
   const user = await loadCurrentUser()
@@ -192,6 +202,7 @@ async function submitLogin() {
     )
   } catch (error) {
     errorMessage.value = error?.message || 'No pudimos iniciar sesion. Intenta de nuevo.'
+    awaitingConfirmation.value = error?.code === 'EMAIL_UNVERIFIED'
   } finally {
     loading.value = false
   }
@@ -450,6 +461,7 @@ async function submitLogin() {
 }
 
 .login-form__forgot {
+  text-decoration: none;
   padding: 4px 0;
   border: 0;
   background: transparent;

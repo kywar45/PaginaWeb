@@ -18,7 +18,7 @@ namespace {
         public $pageCalls = array();
         public $empty = false;
         public function __construct() {}
-        public function findBySessionHash($hash) { return $hash === hash('sha256', str_repeat('a', 64)) ? array('id' => 23) : null; }
+        public function findBySessionHash($hash) { return $hash === hash('sha256', str_repeat('a', 64)) ? array('id' => 23, 'token_registro' => 'confirmed') : null; }
         public function countOrders($id) { $this->countCalls[] = $id; return $this->empty ? 0 : 3; }
         public function ordersPage($id, $limit, $offset) {
             $this->pageCalls[] = array($id, $limit, $offset);
