@@ -106,6 +106,22 @@ class ProductService
         );
     }
 
+    public function listVideoProducts($videoId, $page, $limit)
+    {
+        $video = $this->products->findVideo($videoId);
+        if (!$video) throw new ApiException('VIDEO_NOT_FOUND', 'Este video no está disponible.', 404);
+        $total = $this->products->countVideoProducts($videoId);
+        $items = array();
+        foreach ($this->products->videoProducts($videoId, $limit, ($page - 1) * $limit) as $row) {
+            $items[] = $this->normalizeProduct($row);
+        }
+        $hasMore = $page * $limit < $total;
+        return array('video' => array('id' => (int) $video['id'], 'titulo' => trim((string) $video['titulo'])),
+            'productos' => $items, 'pagination' => array('page' => $page, 'limit' => $limit,
+                'total' => $total, 'total_pages' => (int) ceil($total / $limit),
+                'has_more' => $hasMore, 'next_page' => $hasMore ? $page + 1 : null));
+    }
+
     public function listBrandProducts($brandId, $page, $limit, $onlyAvailable = false)
     {
         $total = $this->products->countBrand($brandId, $onlyAvailable);

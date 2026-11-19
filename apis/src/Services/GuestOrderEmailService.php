@@ -25,14 +25,30 @@ class GuestOrderEmailService
         $query->execute(array($order['folio_id'], $order['cliente_invitado_id']));
         $row = $query->fetch(\PDO::FETCH_ASSOC);
         if (!$row || !filter_var($row['correo'], FILTER_VALIDATE_EMAIL)) throw new \RuntimeException('Invalid order email recipient');
-        $token = bin2hex(random_bytes(32));
-        $url = 'https://www.importadorasupernova.com/ImportadoraSupernova/pedido/correo/pdf?token=' . $token;
-        $subject = 'Pedido registrado ' . $row['orden'] . ' | Importadora Supernova';
-        $html = self::message($row['nombre'], $row['orden'], $url);
-        $insert = $this->pdo->prepare('INSERT INTO web_order_emails
+        $lockName = 'sn:order-invite:' . (int) $row['id'];
+        $lock = $this->pdo->prepare('SELECT GET_LOCK(?, 5)');
+        $lock->execute(array($lockName));
+        if ((int) $lock->fetchColumn() !== 1) return 'pending';
+        try {
+            $this->pdo->beginTransaction();
+            $existing = $this->pdo->prepare('SELECT id FROM web_order_emails WHERE folio_id = ?');
+            $existing->execute(array($row['id']));
+            if (!$existing->fetchColumn()) {
+                $token = bin2hex(random_bytes(32));
+                $url = 'https://www.importadorasupernova.com/ImportadoraSupernova/pedido/correo/pdf?token=' . $token;
+                $subject = 'Pedido registrado ' . $row['orden'] . ' | Importadora Supernova';
+                $signupUrl = (new \App\Repositories\RegistrationRepository($this->pdo))->inviteGuest($row['id'], $row['correo']);
+                $html = self::message($row['nombre'], $row['orden'], $url, $signupUrl, true);
+                $insert = $this->pdo->prepare('INSERT INTO web_order_emails
             (folio_id, cliente_id, recipient, token_hash, message_html, subject, expires_at)
             VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE folio_id = folio_id');
-        $insert->execute(array($row['id'], $row['id_cliente_invitado'], $row['correo'], hash('sha256', $token), $html, $subject, date('Y-m-d H:i:s', time() + 30 * 86400)));
+                $insert->execute(array($row['id'], $row['id_cliente_invitado'], $row['correo'], hash('sha256', $token), $html, $subject, date('Y-m-d H:i:s', time() + 30 * 86400)));
+            }
+            $this->pdo->commit();
+        } catch (\Throwable $error) {
+            if ($this->pdo->inTransaction()) $this->pdo->rollBack();
+            throw $error;
+        } finally { $this->pdo->prepare('SELECT RELEASE_LOCK(?)')->execute(array($lockName)); }
         return $this->deliver((int) $row['id']);
     }
 
@@ -201,12 +217,25 @@ class GuestOrderEmailService
 
     private function invalid() { throw new ApiException('ORDER_LINK_INVALID', 'El enlace del pedido no es válido.', 404); }
 
-    public static function message($name, $reference, $url)
+    public static function message($name, $reference, $url, $signupUrl = null, $accountPrompt = false)
     {
         $escape = function ($value) { return htmlspecialchars($value, ENT_QUOTES, 'UTF-8'); };
         $name = $escape($name);
         $reference = $escape($reference);
         $url = $escape($url);
+        $invitation = '';
+        if ($accountPrompt) {
+            $accountUrl = $escape($signupUrl ?: 'https://www.importadorasupernova.com/ImportadoraSupernova/login');
+            $title = $signupUrl ? 'Tus próximas compras, más fáciles' : 'Tu cuenta Supernova';
+            $copy = $signupUrl
+                ? 'Crea tu cuenta con los datos de esta compra. Solo necesitas elegir una contraseña. El enlace vence en 7 días y se puede usar una sola vez.'
+                : 'Ya tienes una cuenta con este correo. Inicia sesión para consultarla o recupera tu contraseña si la olvidaste.';
+            $label = $signupUrl ? 'Crear mi cuenta' : 'Iniciar sesión';
+            $invitation = '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;background-color:#fff1f5;border-radius:10px;">'
+                . '<tr><td style="padding:20px;"><h2 style="margin:0 0 8px;font-size:17px;color:#312630;">' . $title . '</h2>'
+                . '<p style="margin:0 0 16px;font-size:14px;line-height:22px;color:#796c76;">' . $copy . '</p>'
+                . '<a href="' . $accountUrl . '" style="display:inline-block;padding:12px 20px;border-radius:8px;background-color:#ec326b;color:#fff;text-decoration:none;font-size:14px;font-weight:bold;">' . $label . '</a></td></tr></table>';
+        }
         // Presentation tables and inline styles keep the receipt usable in email clients.
         // Solid pink remains visible when a client blocks remote decorative images.
         return <<<HTML
@@ -263,7 +292,8 @@ class GuestOrderEmailService
           </table>
           <p style="margin:4px 0 27px;text-align:center;font-size:11px;line-height:18px;color:#8e808a;">También puedes abrir tu comprobante haciendo clic en el número de orden.</p>
 
-          <h2 style="margin:0 0 16px;font-size:17px;line-height:24px;color:#312630;">¿Qué sigue ahora?</h2>
+          {$invitation}
+          <h2 style="margin:24px 0 16px;font-size:17px;line-height:24px;color:#312630;">¿Qué sigue ahora?</h2>
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
             <tr>
               <td width="32" valign="top" style="padding:0 12px 16px 0;"><span style="display:block;width:28px;height:28px;line-height:28px;border-radius:14px;background-color:#f9eaf0;color:#cc2b59;text-align:center;font-size:12px;font-weight:bold;">1</span></td>

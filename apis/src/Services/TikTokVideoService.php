@@ -17,29 +17,31 @@ class TikTokVideoService
     {
         $items = array();
         foreach ($this->videos->listActive() as $row) {
-            $url = trim((string) $row['url']);
-            $parts = parse_url($url);
-            if (!is_array($parts) || !isset($parts['scheme'], $parts['host'], $parts['path'])
-                || strtolower($parts['scheme']) !== 'https'
-                || !in_array(strtolower($parts['host']), array('tiktok.com', 'www.tiktok.com', 'm.tiktok.com'), true)
-                || !preg_match('~^/@[A-Za-z0-9._-]+/video/([0-9]{10,25})/?$~D', $parts['path'], $match)) {
-                continue;
-            }
-
-            $cover = trim((string) $row['portada_url']);
-            if ($cover !== '' && (!filter_var($cover, FILTER_VALIDATE_URL)
-                || strtolower((string) parse_url($cover, PHP_URL_SCHEME)) !== 'https')) {
-                $cover = '';
-            }
+            $url = $this->mediaUrl($row['url'], 'mp4');
+            $cover = $this->mediaUrl($row['portada_url'], 'image');
+            if ($url === null || $cover === null) continue;
             $items[] = array(
                 'id' => (int) $row['id'],
-                'video_id' => $match[1],
-                'url' => 'https://www.tiktok.com' . $parts['path'],
+                'url' => $url,
                 'titulo' => trim((string) $row['titulo']),
-                'portada_url' => $cover !== '' ? $cover : null,
+                'portada_url' => $cover,
                 'posicion' => (int) $row['posicion'],
             );
         }
         return array('videos' => $items);
+    }
+
+    private function mediaUrl($value, $type)
+    {
+        $url = trim((string) $value);
+        if (!filter_var($url, FILTER_VALIDATE_URL) || preg_match('/[\x00-\x20\x7F]/', $url)) return null;
+        $parts = parse_url($url);
+        if (!is_array($parts) || !isset($parts['scheme'], $parts['host'], $parts['path'])
+            || strtolower($parts['scheme']) !== 'https'
+            || !in_array(strtolower($parts['host']), array('importadorasupernova.com', 'www.importadorasupernova.com'), true)
+            || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment'])
+            || (isset($parts['port']) && $parts['port'] !== 443)) return null;
+        $pattern = $type === 'mp4' ? '~\.mp4$~iD' : '~\.(?:jpe?g|png|webp|avif)$~iD';
+        return preg_match($pattern, $parts['path']) ? $url : null;
     }
 }

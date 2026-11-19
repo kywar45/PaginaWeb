@@ -7,6 +7,11 @@ const routes = [
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
       { path: 'ofertas', component: () => import('pages/OffersPage.vue') },
+      {
+        path: 'inspirate/:videoId(\\d+)/productos',
+        name: 'video-productos',
+        component: () => import('pages/OffersPage.vue'),
+      },
       { path: 'mas-vendidos', component: () => import('pages/BestSellersPage.vue') },
       { path: 'buscar', component: () => import('pages/SearchPage.vue') },
       { path: 'carrito', component: () => import('pages/CartPage.vue') },
@@ -34,6 +39,7 @@ const routes = [
       { path: 'login', component: () => import('pages/LoginPage.vue') },
       { path: 'panel', component: () => import('pages/AccountPage.vue') },
       { path: 'register', component: () => import('pages/RegisterPage.vue') },
+      { path: 'crear-cuenta-pedido', component: () => import('pages/GuestRegistrationPage.vue') },
       { path: 'confirmar-correo', component: () => import('pages/ConfirmEmailPage.vue') },
       { path: 'olvide-contrasena', component: () => import('pages/PasswordRecoveryPage.vue') },
       { path: 'restablecer-contrasena', component: () => import('pages/PasswordRecoveryPage.vue') },

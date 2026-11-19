@@ -215,6 +215,12 @@ return function (Router $router): void {
     $router->post('/v1/auth/register', function () use ($registrationController): void {
         $registrationController()->register();
     });
+    $router->post('/v1/auth/validar-registro-pedido', function () use ($registrationController): void {
+        $registrationController()->validateGuest();
+    });
+    $router->post('/v1/auth/registro-pedido', function () use ($registrationController): void {
+        $registrationController()->registerGuest();
+    });
     $router->post('/v1/auth/confirmar-correo', function () use ($registrationController): void {
         $registrationController()->confirm();
     });

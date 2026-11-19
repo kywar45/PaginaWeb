@@ -38,6 +38,22 @@ class RegistrationService
         if (!$this->users->renew((int) $user['id'], $hash, date('Y-m-d H:i:s', time() + 86400))) return array('already_verified' => true);
         return $this->send((int) $user['id'], $user['nombre'], $user['correo'], $token, $hash);
     }
+    public function validateGuest(array $input)
+    {
+        $data = $this->users->guestData($this->tokenHash($input));
+        if ($this->users->findEmail($data['correo'])) throw new ApiException('EMAIL_EXISTS', 'Ya tienes una cuenta con este correo. Inicia sesión o recupera tu contraseña.', 409);
+        return array('valid' => true);
+    }
+    public function registerGuest(array $input)
+    {
+        $hash = $this->tokenHash($input);
+        $password = RegistrationData::password($input);
+        $data = $this->users->guestData($hash);
+        RegistrationData::validate(array_merge($data, array('password' => $password, 'password_confirmation' => $password)));
+        $this->limiter->consume($data['correo']);
+        $this->users->create(array(), password_hash($password, PASSWORD_DEFAULT), null, null, $hash);
+        return array('created' => true, 'verified' => true);
+    }
     private function send($id, $name, $email, $token, $hash)
     {
         // The account is committed; a hosting error must not cause a duplicate signup.

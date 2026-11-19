@@ -3,7 +3,7 @@
     v-if="slides.length"
     class="banner-carousel"
     :class="{ 'banner-carousel--strip': strip }"
-    :style="mobileRatio ? { '--mobile-banner-ratio': mobileRatio } : undefined"
+    :style="{ '--mobile-banner-ratio': activeMobileRatio }"
     :aria-label="label"
     aria-roledescription="carrusel"
   >
@@ -33,7 +33,8 @@
           :tabindex="slot === position && slide.href ? 0 : -1"
           class="banner-carousel__slide"
         >
-          <img v-image-skeleton
+          <img
+            v-image-skeleton
             :src="slide.image"
             :alt="`${label} ${slide.id}`"
             :loading="strip ? 'lazy' : 'eager'"
@@ -91,6 +92,7 @@ const quasar = useQuasar()
 const index = ref(0)
 const failedImages = reactive(new Set())
 const mobileRatio = ref(null)
+const imageRatios = reactive(new Map())
 const viewport = ref(null)
 const position = ref(1)
 const animate = ref(true)
@@ -172,8 +174,10 @@ function preventDragClick(event) {
 let autoplayTimer
 function rememberMobileRatio(event) {
   const image = event.target
-  if (quasar.screen.width < 600 && !mobileRatio.value && image.naturalHeight) {
-    mobileRatio.value = `${image.naturalWidth} / ${image.naturalHeight}`
+  if (image.naturalWidth && image.naturalHeight) {
+    const ratio = `${image.naturalWidth} / ${image.naturalHeight}`
+    imageRatios.set(image.currentSrc || image.src, ratio)
+    if (!mobileRatio.value) mobileRatio.value = ratio
   }
 }
 function restartAutoplay() {
@@ -199,8 +203,8 @@ function safeUrl(value) {
     return null
   }
 }
-const slides = computed(() =>
-  props.banners
+const slides = computed(() => {
+  const banners = props.banners
     .map((banner) => {
       const mobile = quasar.screen.width < 600
       const images = mobile
@@ -212,11 +216,16 @@ const slides = computed(() =>
         : safeUrl(banner.redireccion_web)
       return { id: banner.id, image, href }
     })
-    .filter((banner) => banner.image),
-)
+    .filter((banner) => banner.image)
+  return banners
+})
 const trackSlides = computed(() => {
   const list = slides.value
   return list.length > 1 ? [list[list.length - 1], ...list, list[0]] : list
+})
+const activeMobileRatio = computed(() => {
+  const slide = slides.value[index.value]
+  return imageRatios.get(slide?.image) || mobileRatio.value || '16 / 9'
 })
 watch(
   slides,
@@ -251,6 +260,7 @@ onMounted(() => {
       // Cache upcoming images so switching slides does not show an empty frame.
       slides.value.forEach((slide) => {
         const image = new Image()
+        image.onload = () => rememberMobileRatio({ target: image })
         image.src = slide.image
       })
     },
@@ -267,12 +277,15 @@ onBeforeUnmount(() => {
 <style scoped lang="scss">
 .banner-carousel {
   position: relative;
+  isolation: isolate;
   background: var(--store-paper);
 }
 .banner-carousel__viewport {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  border-radius: inherit;
+  clip-path: inset(0 round 10px);
   touch-action: pan-y pinch-zoom;
   cursor: grab;
   user-select: none;
@@ -290,10 +303,15 @@ onBeforeUnmount(() => {
   transition: none;
 }
 .banner-carousel__slide {
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
   flex: 0 0 100%;
   min-width: 0;
   display: block;
   width: 100%;
+  text-decoration: none;
 }
 .banner-carousel__slide img {
   display: block;

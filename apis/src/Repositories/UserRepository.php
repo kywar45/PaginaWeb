@@ -44,7 +44,7 @@ class UserRepository
     public function countPaidOrders($userId)
     {
         $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM folios
-            WHERE id_usuario = :user_id
+            WHERE COALESCE(id_usuario, (SELECT i.usuario_id FROM web_guest_registrations i WHERE i.folio_id = folios.id AND i.used_at IS NOT NULL)) = :user_id
               AND fecha_pago IS NOT NULL
               AND fecha_pago <> '0000-00-00 00:00:00'");
         $stmt->bindValue(':user_id', (int) $userId, \PDO::PARAM_INT);
@@ -54,7 +54,7 @@ class UserRepository
 
     public function countOrders($userId)
     {
-        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM folios WHERE id_usuario = :user_id');
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM folios WHERE COALESCE(id_usuario, (SELECT i.usuario_id FROM web_guest_registrations i WHERE i.folio_id = folios.id AND i.used_at IS NOT NULL)) = :user_id');
         $stmt->bindValue(':user_id', (int) $userId, \PDO::PARAM_INT);
         $stmt->execute();
         return (int) $stmt->fetchColumn();
@@ -63,7 +63,7 @@ class UserRepository
     public function ordersPage($userId, $limit, $offset)
     {
         $stmt = $this->pdo->prepare('SELECT id, orden, fecha, fecha_pago, total, estatus
-            FROM folios WHERE id_usuario = :user_id
+            FROM folios WHERE COALESCE(id_usuario, (SELECT i.usuario_id FROM web_guest_registrations i WHERE i.folio_id = folios.id AND i.used_at IS NOT NULL)) = :user_id
             ORDER BY fecha DESC, id DESC LIMIT :limit OFFSET :offset');
         $stmt->bindValue(':user_id', (int) $userId, \PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);

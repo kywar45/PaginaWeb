@@ -14,6 +14,8 @@ class RegistrationController
     public function resend() { return $this->execute('resend'); }
     public function confirm() { return $this->execute('confirm'); }
     public function validate() { return $this->execute('validate'); }
+    public function validateGuest() { return $this->execute('validateGuest'); }
+    public function registerGuest() { return $this->execute('registerGuest'); }
     private function execute($action)
     {
         header('Cache-Control: private, no-store');

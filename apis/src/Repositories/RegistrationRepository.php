@@ -15,8 +15,9 @@ class RegistrationRepository
         return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
     }
 
-    public function create(array $data, $passwordHash, $tokenHash, $expires)
+    public function create(array $data, $passwordHash, $tokenHash, $expires, $guestTokenHash = null)
     {
+        if ($guestTokenHash !== null) $data = array_merge($data, $this->guestData($guestTokenHash));
         // Also serialize this API's writes while a legacy installation adds its unique index.
         $lockName = 'sn:signup:' . substr(hash('sha256', $data['correo']), 0, 54);
         $lock = $this->pdo->prepare('SELECT GET_LOCK(?, 5)');
@@ -24,6 +25,7 @@ class RegistrationRepository
         if ((int) $lock->fetchColumn() !== 1) throw new ApiException('REGISTER_BUSY', 'El registro está ocupado. Intenta de nuevo.', 409);
         try {
             $this->pdo->beginTransaction();
+            if ($guestTokenHash !== null) $data = array_merge($data, $this->guestData($guestTokenHash, true));
             if ($this->findEmail($data['correo'])) throw new ApiException('EMAIL_EXISTS', 'Ya existe una cuenta con este correo. Inicia sesión o reenvía la confirmación.', 409);
             $fields = array('nombre', 'apellido', 'direccion', 'colonia', 'ciudad', 'estado', 'codigop', 'telefono', 'correo', 'rfc');
             $values = array();
@@ -33,7 +35,14 @@ class RegistrationRepository
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '0', '', ?, '')");
             $stmt->execute(array_merge($values, array($passwordHash, date('Y-m-d H:i:s'))));
             $id = (int) $this->pdo->lastInsertId();
-            $this->insertToken($id, $tokenHash, $expires);
+            if ($guestTokenHash === null) {
+                $this->insertToken($id, $tokenHash, $expires);
+            } else {
+                // Possession of the separate emailed invitation verifies this mailbox.
+                $this->pdo->prepare('UPDATE usuario SET token_registro = ? WHERE id = ?')->execute(array($guestTokenHash, $id));
+                $this->pdo->prepare('UPDATE web_guest_registrations SET usuario_id = ?, used_at = ? WHERE token_hash = ?')
+                    ->execute(array($id, date('Y-m-d H:i:s'), $guestTokenHash));
+            }
             $this->pdo->commit();
             return $id;
         } catch (\Throwable $error) {
@@ -43,6 +52,34 @@ class RegistrationRepository
             }
             throw $error;
         } finally { $this->pdo->prepare('SELECT RELEASE_LOCK(?)')->execute(array($lockName)); }
+    }
+
+    public function inviteGuest($folioId, $email)
+    {
+        if ($this->findEmail(strtolower(trim($email)))) return null;
+        $token = bin2hex(random_bytes(32));
+        $stmt = $this->pdo->prepare('INSERT INTO web_guest_registrations (folio_id, token_hash, expires_at) VALUES (?, ?, ?)');
+        $stmt->execute(array($folioId, hash('sha256', $token), date('Y-m-d H:i:s', time() + 7 * 86400)));
+        return 'https://www.importadorasupernova.com/ImportadoraSupernova/crear-cuenta-pedido?token=' . $token;
+    }
+
+    public function guestData($hash, $lock = false)
+    {
+        // The immutable shipping snapshot belongs to this specific order, not browser data.
+        $stmt = $this->pdo->prepare('SELECT i.used_at, i.expires_at, s.nombre, s.apellido, s.correo,
+            s.direccion, s.colonia, s.ciudad, s.estado, s.codigo_postal AS codigop, s.telefono
+            FROM web_guest_registrations i JOIN folios f ON f.id = i.folio_id
+            JOIN web_pedidos_envio s ON s.folio_id = f.id
+            WHERE i.token_hash = ? AND f.id_usuario IS NULL' . ($lock ? ' FOR UPDATE' : ''));
+        $stmt->execute(array($hash));
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$row) throw new ApiException('GUEST_REGISTER_INVALID', 'El enlace no es válido.', 404);
+        if ($row['used_at'] !== null) throw new ApiException('GUEST_REGISTER_USED', 'Este enlace ya se utilizó. Inicia sesión con tu cuenta.', 410);
+        if (strtotime($row['expires_at']) <= time()) throw new ApiException('GUEST_REGISTER_EXPIRED', 'El enlace venció. Puedes crear tu cuenta desde el registro.', 410);
+        unset($row['used_at'], $row['expires_at']);
+        $row['correo'] = strtolower(trim($row['correo']));
+        $row['rfc'] = '';
+        return $row;
     }
 
     private function insertToken($id, $hash, $expires)

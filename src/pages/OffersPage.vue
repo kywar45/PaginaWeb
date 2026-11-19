@@ -1,20 +1,21 @@
 <template>
   <q-page class="offers-page">
     <section class="offers-page__inner">
-      <PageBreadcrumbs title="Ofertas del día" />
-      <h1 class="sr-only">Ofertas del día</h1>
+      <PageBreadcrumbs :title="pageTitle" :back-to="isVideoPage ? '/#inspirate' : '/'" :parents="isVideoPage ? [{ label: 'Inspírate', to: '/#inspirate' }] : []" />
+      <h1 class="sr-only">{{ pageTitle }}</h1>
+      <p v-if="isVideoPage && !loading && !errorMessage && videoTitle" class="video-products-intro">Productos usados en: <strong>{{ videoTitle }}</strong></p>
 
       <p v-if="!loading && !errorMessage && pagination.total !== undefined" class="offers-page__results" aria-live="polite">
         Total: {{ pagination.total.toLocaleString('es-MX') }} productos
         <span v-if="pagination.total_pages > 1"> · Página {{ page }} de {{ pagination.total_pages }}</span>
       </p>
 
-      <LoadingSkeleton v-if="loading" :count="12" :columns="6" label="Cargando ofertas..." />
+      <LoadingSkeleton v-if="loading" :count="12" :columns="6" :label="isVideoPage ? 'Cargando productos del video...' : 'Cargando ofertas...'" />
       <div v-else-if="errorMessage" class="q-pa-lg text-center" role="alert">
         <p>{{ errorMessage }}</p>
         <q-btn color="primary" no-caps label="Reintentar" @click="loadProducts" />
       </div>
-      <p v-else-if="!products.length" class="q-pa-lg text-center">No hay ofertas disponibles.</p>
+      <p v-else-if="!products.length" class="q-pa-lg text-center">{{ isVideoPage ? 'Todavía no hay productos publicados para este video.' : 'No hay ofertas disponibles.' }}</p>
       <div v-else class="offers-page__grid">
         <article
           v-for="product in products"
@@ -43,7 +44,7 @@
           v-if="pagination.total_pages > 1"
           :model-value="page"
           :max="pagination.total_pages"
-          aria-label="Páginas de ofertas"
+          :aria-label="isVideoPage ? 'Páginas de productos del video' : 'Páginas de ofertas'"
           @update:model-value="changePage"
         />
         <div v-else-if="pagination.total_pages === undefined" class="row q-gutter-sm">
@@ -79,6 +80,9 @@ import { publicAsset } from 'src/utils/publicAsset'
 
 const route = useRoute()
 const router = useRouter()
+const isVideoPage = computed(() => route.name === 'video-productos')
+const pageTitle = computed(() => isVideoPage.value ? 'Productos para recrearlo' : 'Ofertas del día')
+const videoTitle = ref('')
 const pageSize = 30
 const page = computed(() => {
   const value = Number(route.query.page)
@@ -97,9 +101,11 @@ async function loadProducts() {
   request = currentRequest
   loading.value = true
   errorMessage.value = ''
+  videoTitle.value = ''
   try {
     const response = await getProducts({
-      coleccion: 'ofertas',
+      coleccion: isVideoPage.value ? 'recientes' : 'ofertas',
+      id_video: isVideoPage.value ? Number(route.params.videoId) : undefined,
       page: page.value,
       limit: pageSize,
       signal: currentRequest.signal,
@@ -110,20 +116,23 @@ async function loadProducts() {
       return
     }
     products.value = response.productos
+    videoTitle.value = response.video?.titulo || ''
     pagination.value = response.pagination || {}
-  } catch {
+  } catch (error) {
     if (!currentRequest.signal.aborted)
-      errorMessage.value = 'No se pudieron cargar las ofertas. Intenta de nuevo.'
+      errorMessage.value = isVideoPage.value
+        ? (error.status === 404 ? 'Este video ya no está disponible.' : 'No se pudieron cargar los productos del video. Intenta de nuevo.')
+        : 'No se pudieron cargar las ofertas. Intenta de nuevo.'
   } finally {
     if (request === currentRequest) loading.value = false
   }
 }
 
 function changePage(value) {
-  return router.push({ path: '/ofertas', query: { ...route.query, page: String(value) } })
+  return router.push({ path: route.path, query: { ...route.query, page: String(value) } })
 }
 
-watch(page, loadProducts, { immediate: true })
+watch([page, () => route.params.videoId], loadProducts, { immediate: true })
 
 onBeforeUnmount(() => {
   request?.abort()
@@ -141,6 +150,7 @@ function useFallbackImage(event) {
 
 <style scoped lang="scss">
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.video-products-intro { margin: 0 0 16px; color: #755462; font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
 .offers-page__results { margin: 0 0 16px; color: #88717d; font-size: 12px; }
 .offers-page__pagination {
   display: flex;

@@ -740,12 +740,17 @@ onBeforeUnmount(() => request?.abort())
   border: 1px solid #f0cedc;
   border-radius: 13px;
   color: #df2f61;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.product-purchase__quantity > div:focus-within {
+  border-color: #e74779;
+  box-shadow: 0 0 0 3px rgba(231, 71, 121, 0.12);
 }
 .product-purchase__quantity input {
   width: 42px;
   padding: 0;
   border: 0;
-  outline-offset: 3px;
+  outline: none;
   background: transparent;
   color: #503340;
   text-align: center;

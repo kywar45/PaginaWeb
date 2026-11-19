@@ -81,6 +81,12 @@ function registrationRequest(path, body, signal) {
 export function registerAccount(data) {
   return registrationRequest('/auth/register', data)
 }
+export function validateGuestRegistration(token, { signal } = {}) {
+  return registrationRequest('/auth/validar-registro-pedido', { token }, signal)
+}
+export function registerFromOrder(token, password, password_confirmation) {
+  return registrationRequest('/auth/registro-pedido', { token, password, password_confirmation })
+}
 export function confirmAccount(token) {
   return registrationRequest('/auth/confirmar-correo', { token })
 }

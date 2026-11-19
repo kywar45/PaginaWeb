@@ -32,6 +32,11 @@ class ProductController
             $onlyAvailable = $this->integerQuery('solo_disponibles', 0, 0, 1) === 1;
             $limit = $this->integerQuery('limit', ($subcategoryId === null && $categoryId === null) ? 20 : 30, 1, 100);
 
+            if (array_key_exists('id_video', $_GET)) {
+                $videoId = $this->integerQuery('id_video', null, 1, 2147483647);
+                return Response::success($this->service->listVideoProducts($videoId, $page, $limit), 200);
+            }
+
             if (array_key_exists('q', $_GET)) {
                 $query = $_GET['q'];
                 if (!is_string($query) || !preg_match('//u', $query)) {

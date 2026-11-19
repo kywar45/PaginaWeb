@@ -9,11 +9,12 @@ class OrderPdfRepository
 
     public function findOwned($id, $userId)
     {
-        $stmt = $this->pdo->prepare('SELECT f.id, f.id_usuario, f.orden, f.nombres, f.fecha,
+        $stmt = $this->pdo->prepare('SELECT f.id, f.id_usuario, f.id_cliente_invitado, f.orden, f.nombres, f.fecha,
             f.fecha_pago, f.total, f.estatus, c.nombre AS carrier_name, c.envio AS carrier_envio
             FROM folios f
             LEFT JOIN shipping_carriers c ON c.id = f.shipping_carrier_id
-            WHERE f.id = :id AND f.id_usuario = :user_id LIMIT 1');
+            WHERE f.id = :id AND COALESCE(f.id_usuario,
+                (SELECT i.usuario_id FROM web_guest_registrations i WHERE i.folio_id = f.id AND i.used_at IS NOT NULL)) = :user_id LIMIT 1');
         $stmt->bindValue(':id', $id, \PDO::PARAM_INT);
         $stmt->bindValue(':user_id', $userId, \PDO::PARAM_INT);
         $stmt->execute();

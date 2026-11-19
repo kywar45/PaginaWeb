@@ -22,6 +22,40 @@ class ProductRepository
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function findVideo($videoId)
+    {
+        $stmt = $this->pdo->prepare('SELECT id, titulo FROM web_tiktok_videos WHERE id = ? AND activo = 1 LIMIT 1');
+        $stmt->execute(array($videoId));
+        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function countVideoProducts($videoId)
+    {
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM web_video_productos vp
+            JOIN web_tiktok_videos v ON v.id = vp.video_id AND v.activo = 1
+            JOIN productos p ON p.id = vp.producto_id AND p.active = 1
+            WHERE vp.video_id = ?');
+        $stmt->execute(array($videoId));
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function videoProducts($videoId, $limit, $offset)
+    {
+        $stmt = $this->pdo->prepare('SELECT p.*,
+            (SELECT i.a FROM img i WHERE i.id_producto = p.id ORDER BY i.posicion ASC, i.a ASC LIMIT 1) AS imagen
+            FROM web_video_productos vp
+            JOIN web_tiktok_videos v ON v.id = vp.video_id AND v.activo = 1
+            JOIN productos p ON p.id = vp.producto_id AND p.active = 1
+            WHERE vp.video_id = :video_id
+            ORDER BY p.estatus DESC, vp.posicion ASC, p.id ASC
+            LIMIT :limit OFFSET :offset');
+        $stmt->bindValue(':video_id', $videoId, \PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, \PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, \PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     public function listPage($collection, $limit, $offset, $subcategoryId = null, $onlyAvailable = false, $categoryId = null)
     {
         $where = array('p.active = 1');

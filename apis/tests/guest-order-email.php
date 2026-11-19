@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../src/Exceptions/ApiException.php';
 require __DIR__ . '/../src/Services/GuestOrderEmailService.php';
+require __DIR__ . '/../src/Repositories/RegistrationRepository.php';
 function check($value, $message) { if (!$value) throw new RuntimeException($message); }
 class EmailPdo extends PDO {
     public function __construct() {
@@ -16,6 +17,8 @@ class EmailPdo extends PDO {
 }
 $pdo = new EmailPdo();
 $pdo->exec("CREATE TABLE web_order_emails (id INTEGER PRIMARY KEY, folio_id INTEGER UNIQUE, cliente_id INTEGER, recipient TEXT, token_hash TEXT UNIQUE, message_html TEXT, subject TEXT, expires_at TEXT, sent_at TEXT, attempts INTEGER DEFAULT 0);
+CREATE TABLE usuario (id INTEGER PRIMARY KEY, nombre TEXT, correo TEXT, pass TEXT, token_registro TEXT);
+CREATE TABLE web_guest_registrations (folio_id INTEGER PRIMARY KEY, token_hash TEXT UNIQUE, expires_at TEXT, used_at TEXT, usuario_id INTEGER);
 CREATE TABLE folios (id INTEGER, id_cliente_invitado INTEGER, id_usuario INTEGER, orden TEXT);
 CREATE TABLE web_clientes_invitados (id INTEGER, correo TEXT, nombre TEXT);
 INSERT INTO folios VALUES (42, 7, NULL, 'INV-7'), (43, 7, 10, 'OTHER');

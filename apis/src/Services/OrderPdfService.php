@@ -26,7 +26,10 @@ class OrderPdfService
         $order = $this->orders->findOwned($id, $userId);
         if (!$order) throw new ApiException('ORDER_NOT_FOUND', 'El pedido no existe o no pertenece a tu cuenta.', 404);
         if (trim((string) $order['orden']) === '') throw new ApiException('ORDER_REFERENCE_CONFLICT', 'No pudimos identificar el detalle de este pedido.', 409);
-        return $this->prepareData($order, $this->orders->itemsForOrder(trim((string) $order['orden']), $userId), $email);
+        $rows = $order['id_usuario'] === null && !empty($order['id_cliente_invitado'])
+            ? $this->orders->itemsForGuestOrder(trim((string) $order['orden']), (int) $order['id_cliente_invitado'])
+            : $this->orders->itemsForOrder(trim((string) $order['orden']), $userId);
+        return $this->prepareData($order, $rows, $email);
     }
 
     public function prepareGuest($id, $customerId)

@@ -30,27 +30,13 @@
       <ResendConfirmation :email="registeredEmail" />
     </section>
     <div v-else class="registration-layout">
-      <aside class="registration-brand sn-header--premium">
-        <img
-          v-image-skeleton
-          :src="publicAsset('img/logob.png')"
-          alt="Importadora Supernova"
-          width="220"
-        />
-        <p class="registration-brand__motto">De todo para ti,<br />a precios para ti.</p>
-        <h2>Tu próximo favorito<br />empieza aquí.</h2>
-        <p>Crea tu cuenta y ten tus compras siempre a la mano.</p>
-        <ul>
-          <li><q-icon name="inventory_2" /> Consulta tus pedidos</li>
-          <li><q-icon name="location_on" /> Administra tus direcciones</li>
-          <li><q-icon name="shopping_bag" /> Conserva tu carrito</li>
-        </ul>
-      </aside>
+      <AuthShoppingPanel register class="registration-brand" />
       <section class="registration-form-wrap">
         <p class="registration-eyebrow">BIENVENIDO A SUPERNOVA</p>
         <h1>Crea tu cuenta</h1>
         <p class="registration-muted">
-          Completa tus datos. Después te enviaremos un enlace para confirmar tu correo.
+          Regístrate para tener tus pedidos a la mano. Te enviaremos un correo para confirmar tu
+          cuenta.
         </p>
         <q-form greedy @submit.prevent="submit">
           <fieldset v-for="group in groups" :key="group.title" class="registration-group">
@@ -130,9 +116,7 @@
                 ]"
               />
             </div>
-            <p class="registration-hint">
-              Usa al menos 8 caracteres. Tu contraseña se guardará protegida.
-            </p>
+            <p class="registration-hint">Usa al menos 8 caracteres para tu contraseña.</p>
           </fieldset>
           <q-banner v-if="error" rounded class="registration-error" role="alert">{{
             error
@@ -143,7 +127,6 @@
             no-caps
             color="primary"
             label="Crear cuenta"
-            icon-right="arrow_forward"
             class="registration-submit"
             :loading="busy"
             :disable="busy"
@@ -163,7 +146,7 @@ import PageBreadcrumbs from 'src/components/PageBreadcrumbs.vue'
 import ResendConfirmation from 'src/components/ResendConfirmation.vue'
 import { registerAccount } from 'src/services/authApi'
 import { registrationStates, emptyRegistration, registrationPayload } from 'src/utils/registration'
-import { publicAsset } from 'src/utils/publicAsset'
+import AuthShoppingPanel from 'src/components/AuthShoppingPanel.vue'
 const form = reactive(emptyRegistration())
 const busy = ref(false)
 const showPassword = ref(false)
@@ -184,7 +167,7 @@ const groups = [
     ],
   },
   {
-    title: 'Tu dirección',
+    title: '¿Dónde recibirás tus compras?',
     fields: [
       {
         key: 'direccion',
@@ -266,53 +249,13 @@ async function submit() {
 }
 .registration-layout {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr);
   gap: 36px;
   margin-top: 20px;
   align-items: start;
 }
 .registration-brand {
-  border-radius: 18px;
-  padding: 32px 26px;
-  color: #fff;
-  position: sticky;
-  top: 160px;
-  img {
-    display: block;
-    width: 220px;
-    max-width: 100%;
-    height: auto;
-  }
-  h2 {
-    font-size: 28px;
-    line-height: 1.25;
-    font-weight: 700;
-    margin: 30px 0 14px;
-  }
-  p {
-    font-size: 13px;
-    line-height: 1.7;
-  }
-  .registration-brand__motto {
-    font-size: 16px;
-    line-height: 1.5;
-  }
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 28px 0 0;
-    display: grid;
-    gap: 15px;
-    font-size: 13px;
-  }
-  li {
-    display: flex;
-    gap: 9px;
-    align-items: center;
-  }
-  .q-icon {
-    font-size: 21px;
-  }
+  align-self: start;
 }
 .registration-form-wrap {
   padding: 8px 0;

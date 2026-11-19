@@ -1,7 +1,11 @@
 <template>
   <div class="loading-skeleton" :class="`loading-skeleton--${variant}`" :style="{ '--skeleton-columns': columns }" role="status" aria-live="polite" aria-busy="true">
     <span class="loading-skeleton__sr">{{ label }}</span>
-    <div v-if="variant === 'product'" class="loading-skeleton__detail" aria-hidden="true">
+    <q-skeleton v-if="variant === 'banner'" class="loading-skeleton__banner" aria-hidden="true" />
+    <div v-else-if="variant === 'videos'" class="loading-skeleton__videos" aria-hidden="true">
+      <q-skeleton v-for="item in count" :key="item" class="loading-skeleton__video" />
+    </div>
+    <div v-else-if="variant === 'product'" class="loading-skeleton__detail" aria-hidden="true">
       <q-skeleton class="loading-skeleton__gallery" />
       <div class="loading-skeleton__description">
         <q-skeleton type="text" width="35%" />
@@ -58,6 +62,12 @@ defineProps({
 
 <style scoped>
 .loading-skeleton { width: 100%; margin: 14px 0; }
+.loading-skeleton--banner { margin: 0; }
+.loading-skeleton__banner { width: 100%; aspect-ratio: 3 / 1; }
+.loading-skeleton__videos { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(210px, 240px); gap: 10px; overflow: hidden; }
+.loading-skeleton__video { aspect-ratio: 9 / 16; }
+@media (max-width: 599px) { .loading-skeleton__videos { grid-auto-columns: min(44vw, 170px); gap: 8px; } }
+@media (max-width: 599px) { .loading-skeleton__banner { aspect-ratio: 16 / 9; } }
 .loading-skeleton__sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .loading-skeleton :deep(.q-skeleton) { background: #f4eff1; border-radius: 9px; }
 .loading-skeleton__cards { display: grid; grid-template-columns: repeat(var(--skeleton-columns), minmax(0, 1fr)); gap: 14px; }

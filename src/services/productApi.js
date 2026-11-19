@@ -40,6 +40,7 @@ export async function getProducts({
   id_subcategoria,
   id_categoria,
   id_marca,
+  id_video,
   solo_disponibles = false,
   q,
   orden,
@@ -60,6 +61,7 @@ export async function getProducts({
 
   if (solo_disponibles) params.set('solo_disponibles', '1')
   if (id_marca !== undefined && id_marca !== null) params.set('id_marca', String(id_marca))
+  if (id_video !== undefined && id_video !== null) params.set('id_video', String(id_video))
   if (q !== undefined) params.set('q', q)
   if (orden !== undefined) params.set('orden', orden)
   if (solo_ofertas) params.set('solo_ofertas', '1')
@@ -73,10 +75,20 @@ export async function getProducts({
   const payload = await response.json()
 
   if (!response.ok || payload?.success !== true || !Array.isArray(payload.data?.productos)) {
-    throw new Error(payload?.error?.message || 'No se pudieron cargar los productos.')
+    const error = new Error(payload?.error?.message || 'No se pudieron cargar los productos.')
+    error.status = response.status
+    error.code = payload?.error?.code
+    throw error
   }
   if (q !== undefined && payload.data.search_query !== q) {
     throw new Error('El buscador todavía no está habilitado en el servidor.')
+  }
+  if (
+    id_video !== undefined &&
+    id_video !== null &&
+    Number(payload.data.video?.id) !== Number(id_video)
+  ) {
+    throw new Error('Actualiza la API para consultar los productos de este video.')
   }
   if (
     id_marca !== undefined &&
@@ -97,6 +109,7 @@ export async function getProducts({
   return {
     productos: payload.data.productos.map(normalizeProduct),
     pagination: payload.data.pagination,
+    video: payload.data.video,
   }
 }
 

@@ -1,8 +1,15 @@
 <template>
   <q-page class="store-home" :style="{ backgroundImage: `url(${storeBackground})` }">
     <div class="store-container main-banner-container">
-      <q-skeleton v-if="bannersLoading" class="banner-loading" />
-      <StoreBannerCarousel v-else :banners="mainBanners" />
+      <LoadingSkeleton v-if="bannersLoading" variant="banner" label="Cargando promociones..." />
+      <template v-else>
+        <StoreBannerCarousel :banners="mainBanners" />
+        <div v-if="bannersError" class="home-banner-status" role="alert">
+          No pudimos cargar todas las promociones.
+          <q-btn flat dense no-caps color="primary" label="Reintentar" @click="retryHomePromotions" />
+        </div>
+        <p v-else-if="!mainBanners.length" class="home-banner-status">Pronto encontrarás más productos para descubrir.</p>
+      </template>
     </div>
     <div class="store-container store-container--content">
       <section id="ofertas" class="daily-offers">
@@ -220,7 +227,7 @@
       <div class="store-promotions">
         <StoreBannerCarousel :banners="advertisingBanners" strip label="Publicidad" />
       </div>
-      <TikTokCarousel />
+      <InspirationCarousel />
 
       <section class="random-categories" aria-labelledby="random-categories-title">
         <div class="random-categories__heading">
@@ -379,7 +386,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import ProductBadge from 'src/components/ProductBadge.vue'
 import NewBadge from 'src/components/NewBadge.vue'
-import TikTokCarousel from 'src/components/TikTokCarousel.vue'
+import InspirationCarousel from 'src/components/InspirationCarousel.vue'
 import StoreBannerCarousel from 'src/components/StoreBannerCarousel.vue'
 import { getBanners } from 'src/services/bannerApi'
 import { getCategories } from 'src/services/categoryApi'
@@ -393,6 +400,7 @@ const selectedSubcategory = ref(null)
 const selectedCollection = ref(null)
 const banners = ref([])
 const bannersLoading = ref(true)
+const bannersError = ref(false)
 const offerRail = ref(null)
 const offerPage = ref(0)
 const offerPageCount = ref(1)
@@ -421,7 +429,9 @@ const advertisingBanners = computed(() =>
     .filter((banner) => Number(banner.tipo) === 2 && Number(banner.posicion) === 1)
     .slice(0, 1),
 )
-onMounted(async () => {
+async function loadHomeBanners() {
+  bannersLoading.value = true
+  bannersError.value = false
   const timeout = setTimeout(() => bannerRequest.abort(), 15000)
   try {
     const results = await Promise.allSettled([
@@ -429,13 +439,19 @@ onMounted(async () => {
       getBanners({ tipo: 2, maxItems: 1, signal: bannerRequest.signal }),
     ])
     banners.value = results.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
+    bannersError.value = results[0].status === 'rejected'
   } catch (error) {
+    bannersError.value = true
     if (error.name !== 'AbortError') console.warn('No se pudieron cargar los banners.')
   } finally {
     clearTimeout(timeout)
     bannersLoading.value = false
   }
-})
+}
+onMounted(loadHomeBanners)
+function retryHomePromotions() {
+  return loadHomeBanners()
+}
 onMounted(async () => {
   const timeout = setTimeout(() => categoryRequest.abort(), 15000)
   try {
@@ -463,9 +479,14 @@ async function loadHomeProducts() {
     await Promise.allSettled(collections.map(async ([key, coleccion, limit, target]) => {
       try {
         const result = await getProducts({ solo_disponibles: true, coleccion, limit, signal: current.signal })
-        if (productRequest === current) target.value = result.productos
+        if (productRequest === current) {
+          target.value = result.productos
+
+        }
       } catch {
-        if (productRequest === current) productErrors.value[key] = true
+        if (productRequest === current) {
+          productErrors.value[key] = true
+        }
       } finally {
         if (productRequest === current) {
           productsLoading.value[key] = false
